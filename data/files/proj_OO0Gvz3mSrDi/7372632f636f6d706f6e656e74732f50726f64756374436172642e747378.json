@@ -1,0 +1,6 @@
+{
+  "project_id": "proj_OO0Gvz3mSrDi",
+  "file_path": "src/components/ProductCard.tsx",
+  "content": "import React from 'react';\n\nexport interface Product {\n  id: string;\n  title: string;\n  tag: string;\n  desc: string;\n  price: number;\n  icon: string;\n}\n\ninterface ProductCardProps {\n  product: Product;\n  onAddToCart: (p: Product) => void;\n}\n\nexport const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }) => {\n  return (\n    <div className=\"product-card\">\n      <div className=\"card-icon\">{product.icon}</div>\n      <div className=\"card-content\">\n        <div className=\"card-tag\">{product.tag}</div>\n        <h3 className=\"card-title\">{product.title}</h3>\n        <p className=\"card-desc\">{product.desc}</p>\n        <div className=\"card-action\">\n          <span className=\"card-price\">${product.price}</span>\n          <button className=\"add-btn\" onClick={() => onAddToCart(product)}>\n            Add to Order\n          </button>\n        </div>\n      </div>\n    </div>\n  );\n};\n",
+  "updated_at": "2026-11-09T11:03:54.473Z"
+}
