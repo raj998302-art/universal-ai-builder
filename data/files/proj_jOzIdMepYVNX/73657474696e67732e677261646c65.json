@@ -1,0 +1,6 @@
+{
+  "project_id": "proj_jOzIdMepYVNX",
+  "file_path": "settings.gradle",
+  "content": "rootProject.name = \"HelloWorldKotlinApp\"\ninclude ':app'\n",
+  "updated_at": "2026-11-09T12:09:01.204Z"
+}
