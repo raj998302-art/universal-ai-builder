@@ -3,11 +3,13 @@ import { NextRequest, NextResponse } from 'next/server';
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Protect API routes (except health check, auth, and signed download URLs)
+  // Protect API routes (except health check, auth, preview, mcp, and signed download URLs)
   if (
     pathname.startsWith('/api/') &&
     !pathname.startsWith('/api/health') &&
     !pathname.startsWith('/api/auth') &&
+    !pathname.startsWith('/api/preview') &&
+    !pathname.startsWith('/api/mcp') &&
     !request.nextUrl.searchParams.has('key')
   ) {
     const authHeader = request.headers.get('authorization');
