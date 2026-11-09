@@ -1,0 +1,6 @@
+{
+  "project_id": "proj_Y_-Wf9Bmp17B",
+  "file_path": "src/main.tsx",
+  "content": "import React from 'react';\nimport ReactDOM from 'react-dom/client';\nimport { App } from './App';\nimport './styles/theme.css';\n\nReactDOM.createRoot(document.getElementById('root')!).render(\n  <React.StrictMode>\n    <App />\n  </React.StrictMode>\n);\n",
+  "updated_at": "2026-11-09T11:09:33.592Z"
+}
