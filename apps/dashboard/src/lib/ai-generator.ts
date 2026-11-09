@@ -3,6 +3,8 @@
  * Generates production-ready Flutter, Native Android (Kotlin), and Web/React applications.
  */
 
+import { generateNativeAndroidApp } from './android-generator';
+
 export interface GeneratedProject {
   name: string;
   type: 'flutter' | 'android' | 'web';
@@ -1482,58 +1484,13 @@ flutter:
   };
 }
 
-// ── 3. NATIVE ANDROID (KOTLIN) APPLICATION GENERATOR ────────────────
+// ── 3. NATIVE ANDROID (KOTLIN/JAVA) APPLICATION GENERATOR ──────────
 export function generateNativeAndroidProject(prompt: string, customName?: string): GeneratedProject {
-  const cleanName = (customName || 'NativeAndroidApp').replace(/[^a-zA-Z0-9]/g, '');
-
-  const mainActivity = `package com.universalaibuilder.app
-
-import android.os.Bundle
-import androidx.appcompat.app.AppCompatActivity
-import android.widget.TextView
-import android.widget.LinearLayout
-import android.graphics.Color
-import android.view.Gravity
-
-class MainActivity : AppCompatActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-
-        val layout = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER
-            setBackgroundColor(Color.parseColor("#090D16"))
-            setPadding(48, 48, 48, 48)
-        }
-
-        val titleView = TextView(this).apply {
-            text = "Universal AI Android App"
-            textSize = 24f
-            setTextColor(Color.parseColor("#38BDF8"))
-            gravity = Gravity.CENTER
-        }
-
-        val descView = TextView(this).apply {
-            text = "${prompt.replace(/"/g, '\\"')}"
-            textSize = 16f
-            setTextColor(Color.parseColor("#94A3B8"))
-            setPadding(0, 32, 0, 0)
-            gravity = Gravity.CENTER
-        }
-
-        layout.addView(titleView)
-        layout.addView(descView)
-        setContentView(layout)
-    }
-}
-`;
-
+  const result = generateNativeAndroidApp(prompt, { name: customName });
   return {
-    name: cleanName,
+    name: result.name,
     type: 'android',
     description: prompt,
-    files: {
-      'app/src/main/java/com/universalaibuilder/app/MainActivity.kt': mainActivity,
-    },
+    files: result.files,
   };
 }

@@ -98,18 +98,20 @@ jobs:
         run: |
           cd workspace/app
           flutter build apk --release --verbose
-          mkdir -p ../../output
-          cp build/app/outputs/flutter-apk/app-release.apk ../../output/${{ github.event.inputs.build_id }}_release.apk
-          ls -la ../../output/
+          OUTPUT_DIR="$GITHUB_WORKSPACE/output"
+          mkdir -p "$OUTPUT_DIR"
+          cp build/app/outputs/flutter-apk/app-release.apk "$OUTPUT_DIR/${{ github.event.inputs.build_id }}_release.apk"
+          ls -la "$OUTPUT_DIR"
 
       - name: Compile Flutter Release AAB
         if: github.event.inputs.build_type == 'aab'
         run: |
           cd workspace/app
           flutter build appbundle --release --verbose
-          mkdir -p ../../output
-          cp build/app/outputs/bundle/release/app-release.aab ../../output/${{ github.event.inputs.build_id }}_release.aab
-          ls -la ../../output/
+          OUTPUT_DIR="$GITHUB_WORKSPACE/output"
+          mkdir -p "$OUTPUT_DIR"
+          cp build/app/outputs/bundle/release/app-release.aab "$OUTPUT_DIR/${{ github.event.inputs.build_id }}_release.aab"
+          ls -la "$OUTPUT_DIR"
 
       - name: Upload Output Artifacts
         uses: actions/upload-artifact@v4
@@ -280,9 +282,15 @@ jobs:
           cd workspace/android-app
           gradle --version
           gradle assembleRelease --stacktrace
-          mkdir -p ../../output
-          cp app/build/outputs/apk/release/*.apk ../../output/${{ github.event.inputs.build_id }}_native_release.apk || cp app/build/outputs/apk/release/*-unsigned.apk ../../output/${{ github.event.inputs.build_id }}_native_release.apk
-          ls -la ../../output/
+          OUTPUT_DIR="$GITHUB_WORKSPACE/output"
+          mkdir -p "$OUTPUT_DIR"
+          APK_FILE="$OUTPUT_DIR/${{ github.event.inputs.build_id }}_native_release.apk"
+          cp app/build/outputs/apk/release/*.apk "$APK_FILE" || cp app/build/outputs/apk/release/*-unsigned.apk "$APK_FILE"
+          ls -la "$OUTPUT_DIR"
+          echo "=== APK VALIDATION & INTEGRITY METADATA ==="
+          ls -lh "$APK_FILE"
+          sha256sum "$APK_FILE"
+          unzip -t "$APK_FILE" | head -n 10
 
       - name: Build Native Android AAB
         if: github.event.inputs.build_type == 'aab'
@@ -292,9 +300,15 @@ jobs:
           export PATH="/tmp/gradle-dist/gradle-8.7/bin:$PATH"
           cd workspace/android-app
           gradle bundleRelease --stacktrace
-          mkdir -p ../../output
-          cp app/build/outputs/bundle/release/*.aab ../../output/${{ github.event.inputs.build_id }}_native_release.aab
-          ls -la ../../output/
+          OUTPUT_DIR="$GITHUB_WORKSPACE/output"
+          mkdir -p "$OUTPUT_DIR"
+          AAB_FILE="$OUTPUT_DIR/${{ github.event.inputs.build_id }}_native_release.aab"
+          cp app/build/outputs/bundle/release/*.aab "$AAB_FILE"
+          ls -la "$OUTPUT_DIR"
+          echo "=== AAB VALIDATION & INTEGRITY METADATA ==="
+          ls -lh "$AAB_FILE"
+          sha256sum "$AAB_FILE"
+          unzip -t "$AAB_FILE" | head -n 10
 
       - name: Upload Output Artifacts
         uses: actions/upload-artifact@v4

@@ -8,6 +8,7 @@ const navGroups = [
     title: 'Core Platform',
     items: [
       { href: '/dashboard', label: 'Dashboard', icon: '⚡' },
+      { href: '/dashboard/workspace', label: 'IDE Workspace', icon: '💻', badge: 'v4' },
       { href: '/dashboard/builder', label: 'AI Builder Workspace', icon: '✨', badge: 'AI' },
       { href: '/dashboard/projects', label: 'My Projects', icon: '📁' },
       { href: '/dashboard/projects/new', label: 'New Project', icon: '➕' },
