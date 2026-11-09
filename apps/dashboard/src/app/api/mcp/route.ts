@@ -1164,7 +1164,7 @@ async function executeTool(name: string, args: any, user: any) {
       } else if (prompt) {
         if (/title|heading|brand/i.test(prompt)) {
           const newTitle = prompt.replace(/.*title\s+(to|is)\s+/i, '').replace(/["']/g, '').trim() || 'NextGen Modern Platform';
-          newContent = newContent.replace(/Designed for the.*?Experience/s, `Designed for ${newTitle}`);
+          newContent = newContent.replace(/Designed for the[\s\S]*?Experience/, `Designed for ${newTitle}`);
         } else if (/background|color|theme/i.test(prompt)) {
           newContent = newContent.replace(/--bg:\s*#[a-f0-9]{3,6}/i, '--bg: #030712');
         } else {
