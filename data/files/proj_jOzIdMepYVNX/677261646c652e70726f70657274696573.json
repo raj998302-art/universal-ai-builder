@@ -1,0 +1,6 @@
+{
+  "project_id": "proj_jOzIdMepYVNX",
+  "file_path": "gradle.properties",
+  "content": "android.useAndroidX=true\nandroid.enableJetifier=false\norg.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8\n",
+  "updated_at": "2026-11-09T12:09:03.240Z"
+}
