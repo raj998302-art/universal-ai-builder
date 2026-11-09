@@ -69,6 +69,13 @@ jobs:
           echo "Flutter project generated successfully with name: $CLEAN_NAME"
           flutter doctor -v
 
+          # Configure resilient Gradle distribution mirror to avoid upstream GitHub 504 timeouts
+          if [ -f "android/gradle/wrapper/gradle-wrapper.properties" ]; then
+            sed -i 's|services.gradle.org/distributions|mirrors.cloud.tencent.com/gradle|g' android/gradle/wrapper/gradle-wrapper.properties
+            echo "Resilient Gradle wrapper configured:"
+            cat android/gradle/wrapper/gradle-wrapper.properties
+          fi
+
           # Inject custom source code if provided via MCP write_file
           if [ -n "${{ github.event.inputs.source_code }}" ]; then
             python3 -c "
@@ -265,8 +272,8 @@ jobs:
       - name: Build Native Android APK
         if: github.event.inputs.build_type == 'apk'
         run: |
-          # Install and use Gradle 8.7 compatible with AGP 8.2
-          wget -q https://services.gradle.org/distributions/gradle-8.7-bin.zip -O /tmp/gradle.zip
+          # Install and use Gradle 8.7 compatible with AGP 8.2 (with resilient fallback)
+          wget -q --timeout=15 https://services.gradle.org/distributions/gradle-8.7-bin.zip -O /tmp/gradle.zip || wget -q https://mirrors.cloud.tencent.com/gradle/gradle-8.7-bin.zip -O /tmp/gradle.zip
           unzip -q /tmp/gradle.zip -d /tmp/gradle-dist
           export PATH="/tmp/gradle-dist/gradle-8.7/bin:$PATH"
 
@@ -280,6 +287,8 @@ jobs:
       - name: Build Native Android AAB
         if: github.event.inputs.build_type == 'aab'
         run: |
+          # Install and use Gradle 8.7 compatible with AGP 8.2 (with resilient fallback)
+          [ ! -d "/tmp/gradle-dist/gradle-8.7" ] && (wget -q --timeout=15 https://services.gradle.org/distributions/gradle-8.7-bin.zip -O /tmp/gradle.zip || wget -q https://mirrors.cloud.tencent.com/gradle/gradle-8.7-bin.zip -O /tmp/gradle.zip) && unzip -q /tmp/gradle.zip -d /tmp/gradle-dist
           export PATH="/tmp/gradle-dist/gradle-8.7/bin:$PATH"
           cd workspace/android-app
           gradle bundleRelease --stacktrace

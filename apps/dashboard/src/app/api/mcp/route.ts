@@ -477,7 +477,7 @@ async function executeTool(name: string, args: any, user: any) {
             );
             const matchingRun = workerRuns.find(
               (r: any) => r.display_title?.includes(build_id)
-            ) || workerRuns[0];
+            );
 
             if (matchingRun) {
               const isComplete = matchingRun.status === 'completed';
@@ -508,6 +508,14 @@ async function executeTool(name: string, args: any, user: any) {
                 html_url: matchingRun.html_url,
                 artifacts,
               };
+            } else {
+              return {
+                build_id,
+                status: 'building',
+                conclusion: null,
+                message: 'Build dispatched to worker pool, runner initializing...',
+                artifacts: [],
+              };
             }
           }
         } catch {}
@@ -533,7 +541,7 @@ async function executeTool(name: string, args: any, user: any) {
             );
             const matchingRun = workerRuns.find(
               (r: any) => r.display_title?.includes(build_id)
-            ) || workerRuns[0];
+            );
 
             if (matchingRun) {
               const jobsRes = await fetch(matchingRun.jobs_url, {
@@ -553,6 +561,12 @@ async function executeTool(name: string, args: any, user: any) {
                   };
                 }
               }
+            } else {
+              return {
+                build_id,
+                status: 'building',
+                logs: ['[System] Worker runner initializing container environment...'],
+              };
             }
           }
         } catch {}
