@@ -1,0 +1,13 @@
+{
+  "id": "proj_KdVTwCPhqaIO",
+  "user_id": "00000000-0000-0000-0000-000000000001",
+  "name": "ErrorRecoveryDemoClone",
+  "type": "web",
+  "description": "Multi-page SaaS marketing platform with Navigation header, Home hero section, Feature matrix, Pricing cards, About Us story, Contact inquiry form, and comprehensive Footer",
+  "config": {
+    "framework": "react"
+  },
+  "created_at": "2026-11-09T12:27:40.179Z",
+  "updated_at": "2026-11-09T12:27:40.179Z",
+  "files": {}
+}
