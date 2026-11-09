@@ -1,0 +1,6 @@
+{
+  "project_id": "proj_jOzIdMepYVNX",
+  "file_path": "build.gradle",
+  "content": "buildscript {\n    repositories {\n        google()\n        mavenCentral()\n    }\n    dependencies {\n        classpath 'com.android.tools.build:gradle:8.2.2'\n        classpath 'org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.22'\n    }\n}\nallprojects {\n    repositories {\n        google()\n        mavenCentral()\n    }\n}\n",
+  "updated_at": "2026-11-09T12:09:02.214Z"
+}
