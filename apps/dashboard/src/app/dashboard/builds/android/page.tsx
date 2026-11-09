@@ -1,9 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 
-export default function AndroidBuildCenter() {
+function AndroidBuildCenterContent() {
   const searchParams = useSearchParams();
   const [projectId, setProjectId] = useState<string>(searchParams.get('id') || 'proj_OJgUMkToKaiC');
   const [buildTarget, setBuildTarget] = useState<'flutter_apk' | 'flutter_aab' | 'android_apk' | 'android_aab'>('flutter_apk');
@@ -255,5 +255,13 @@ export default function AndroidBuildCenter() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function AndroidBuildCenter() {
+  return (
+    <Suspense fallback={<div className="p-8 text-slate-400 text-sm">Loading Android Build Center...</div>}>
+      <AndroidBuildCenterContent />
+    </Suspense>
   );
 }

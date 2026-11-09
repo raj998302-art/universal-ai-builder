@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 
-export default function WebsitePreviewPage() {
+function WebsitePreviewContent() {
   const searchParams = useSearchParams();
   const [projectId, setProjectId] = useState<string>(searchParams.get('id') || 'proj_dopYf3iSTFBL');
   const [viewport, setViewport] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
@@ -117,5 +117,13 @@ export default function WebsitePreviewPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function WebsitePreviewPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-slate-400 text-sm">Loading Website Preview...</div>}>
+      <WebsitePreviewContent />
+    </Suspense>
   );
 }
