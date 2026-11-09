@@ -218,14 +218,11 @@ jobs:
           }
           EOF
 
-          # Gradle wrapper
-          gradle wrapper --gradle-version 8.7
-
       - name: Build Native Android APK
         if: github.event.inputs.build_type == 'apk'
         run: |
           cd workspace/android-app
-          ./gradlew assembleRelease --stacktrace
+          gradle assembleRelease --stacktrace
           mkdir -p ../../output
           cp app/build/outputs/apk/release/*.apk ../../output/${{ github.event.inputs.build_id }}_native_release.apk || cp app/build/outputs/apk/release/*-unsigned.apk ../../output/${{ github.event.inputs.build_id }}_native_release.apk
           ls -la ../../output/
@@ -234,7 +231,7 @@ jobs:
         if: github.event.inputs.build_type == 'aab'
         run: |
           cd workspace/android-app
-          ./gradlew bundleRelease --stacktrace
+          gradle bundleRelease --stacktrace
           mkdir -p ../../output
           cp app/build/outputs/bundle/release/*.aab ../../output/${{ github.event.inputs.build_id }}_native_release.aab
           ls -la ../../output/
