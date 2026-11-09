@@ -1,0 +1,6 @@
+{
+  "project_id": "proj_jOzIdMepYVNX",
+  "file_path": "app/src/main/AndroidManifest.xml",
+  "content": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<manifest xmlns:android=\"http://schemas.android.com/apk/res/android\">\n\n\n\n    <application\n        android:allowBackup=\"true\"\n        android:label=\"HelloWorldKotlinApp\"\n        android:supportsRtl=\"true\"\n        android:theme=\"@style/Theme.App\">\n        <activity\n            android:name=\".MainActivity\"\n            android:exported=\"true\">\n            <intent-filter>\n                <action android:name=\"android.intent.action.MAIN\" />\n                <category android:name=\"android.intent.category.LAUNCHER\" />\n            </intent-filter>\n        </activity>\n    </application>\n</manifest>\n",
+  "updated_at": "2026-11-09T12:09:05.145Z"
+}
