@@ -1,0 +1,6 @@
+{
+  "project_id": "proj_OVP8W_vgszHz",
+  "file_path": "README.md",
+  "content": "# ApexStore — Modern Commerce\n\nGenerated autonomously by **Universal AI App & Website Builder**.\n\n## Prompt\n> \"Apex Enterprise SaaS Telemetry & Product Platform with real-time KPI metrics, dark mode theme system, responsive catalog grid, interactive drawer, and contact form.\"\n\n## Architecture\n- **Framework:** React 18 + Vite + TypeScript\n- **Components:** Modular architecture (`Navbar`, `ProductCard`, `CartDrawer`, `Footer`)\n- **Pages / Views:** Home showcase, Products catalog, Telemetry & Metrics, Contact inquiries\n- **Design System:** Custom CSS glassmorphism theme (`src/styles/theme.css`)\n- **State Management:** Reactive shopping cart state with live total calculator\n\n## Build & Preview\n```bash\n# Install dependencies\nnpm install\n\n# Run development server\nnpm run dev\n\n# Run production build (outputs to dist/)\nnpm run build\n```\n",
+  "updated_at": "2026-11-09T10:58:46.732Z"
+}
