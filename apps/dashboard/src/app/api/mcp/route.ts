@@ -472,11 +472,10 @@ async function executeTool(name: string, args: any, user: any) {
           );
           if (runsRes.ok) {
             const runsData = await runsRes.json();
-            const workerRuns = (runsData.workflow_runs || []).filter(
-              (r: any) => r.name === 'Cloud Build Worker'
-            );
-            const matchingRun = workerRuns.find(
-              (r: any) => r.display_title?.includes(build_id)
+            const matchingRun = (runsData.workflow_runs || []).find(
+              (r: any) =>
+                (build_id && (r.display_title?.includes(build_id) || r.name?.includes(build_id))) ||
+                r.name === 'Cloud Build Worker'
             );
 
             if (matchingRun) {
@@ -536,11 +535,10 @@ async function executeTool(name: string, args: any, user: any) {
           );
           if (runsRes.ok) {
             const runsData = await runsRes.json();
-            const workerRuns = (runsData.workflow_runs || []).filter(
-              (r: any) => r.name === 'Cloud Build Worker'
-            );
-            const matchingRun = workerRuns.find(
-              (r: any) => r.display_title?.includes(build_id)
+            const matchingRun = (runsData.workflow_runs || []).find(
+              (r: any) =>
+                (build_id && (r.display_title?.includes(build_id) || r.name?.includes(build_id))) ||
+                r.name === 'Cloud Build Worker'
             );
 
             if (matchingRun) {
