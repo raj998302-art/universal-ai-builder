@@ -393,7 +393,11 @@ async function executeTool(name: string, args: any, user: any) {
 
     // ── 2. list_projects ────────────────────────────────────────────
     case 'list_projects': {
-      return await listProjects(user.id);
+      const projects = await listProjects(user.id);
+      return {
+        projects,
+        count: projects.length,
+      };
     }
 
     // ── 3. get_project ──────────────────────────────────────────────
@@ -479,11 +483,16 @@ async function executeTool(name: string, args: any, user: any) {
     // ── 10. list_files ──────────────────────────────────────────────
     case 'list_files': {
       const files = await listProjectFiles(args.project_id);
-      return files.map(f => ({
+      const fileList = files.map(f => ({
         file_path: f.file_path,
         size_bytes: f.content.length,
         updated_at: f.updated_at,
       }));
+      return {
+        project_id: args.project_id,
+        files: fileList,
+        count: fileList.length,
+      };
     }
 
     // ── 11. search_files ────────────────────────────────────────────
@@ -918,7 +927,7 @@ async function executeTool(name: string, args: any, user: any) {
             if (build_id) {
               arts = arts.filter((a: any) => a.name.includes(build_id));
             }
-            return arts.map((a: any) => ({
+            const artifactList = arts.map((a: any) => ({
               artifact_id: a.id.toString(),
               name: a.name,
               filename: `${a.name}.zip`,
@@ -926,11 +935,20 @@ async function executeTool(name: string, args: any, user: any) {
               download_url: `https://universal-ai-builder-nine.vercel.app/api/artifacts/${a.id}`,
               created_at: a.created_at,
             }));
+            return {
+              build_id: build_id || null,
+              artifacts: artifactList,
+              count: artifactList.length,
+            };
           }
         } catch {}
       }
 
-      return [];
+      return {
+        build_id: build_id || null,
+        artifacts: [],
+        count: 0,
+      };
     }
 
     // ── 29. download_artifact ───────────────────────────────────────
@@ -1056,6 +1074,7 @@ export async function POST(request: NextRequest) {
           id,
           result: {
             content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+            structuredContent: typeof result === 'object' && result !== null && !Array.isArray(result) ? result : { result },
           },
         });
       } catch (err: any) {
