@@ -16,7 +16,7 @@ export async function GET(
 
   if (dbAvailable) {
     try {
-      const rows = await query('SELECT * FROM build_jobs WHERE id = $1', [buildId]);
+      const rows: any = await query('SELECT * FROM build_jobs WHERE id = $1', [buildId]);
       if (rows && rows.length > 0) return successResponse(rows[0]);
     } catch (err: any) {
       console.error('DB error fetching build:', err);

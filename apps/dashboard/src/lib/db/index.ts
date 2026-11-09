@@ -26,14 +26,14 @@ export function getDb() {
  * Execute a SQL query against the database.
  * Throws an error with a helpful message if the database is not configured.
  */
-export async function query(sql: string, params: unknown[] = []) {
+export async function query(sql: string, params: unknown[] = []): Promise<any> {
   const db = getDb();
   if (!db) {
     throw new Error(
       'Database is not configured. Set the DATABASE_URL environment variable to connect to your Neon PostgreSQL database.'
     );
   }
-  return db(sql, params);
+  return (await db(sql, params as any)) as any;
 }
 
 /**

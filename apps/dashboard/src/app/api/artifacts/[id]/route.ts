@@ -18,7 +18,7 @@ export async function GET(
   let artifact: any = null;
   if (dbAvailable) {
     try {
-      const rows = await query('SELECT * FROM artifacts WHERE id = $1', [artifactId]);
+      const rows: any = await query('SELECT * FROM artifacts WHERE id = $1', [artifactId]);
       if (rows && rows.length > 0) artifact = rows[0];
     } catch (err: any) {
       console.error('Artifact DB fetch error:', err);
