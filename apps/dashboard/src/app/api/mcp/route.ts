@@ -367,9 +367,9 @@ async function executeTool(name: string, args: any, user: any) {
       } else {
         const memFiles = memoryStore.files.get(projectId);
         if (memFiles) {
-          for (const [path, f] of memFiles.entries()) {
-            filesMap[path] = f.content;
-          }
+          memFiles.forEach((f, p) => {
+            filesMap[p] = f.content;
+          });
         }
       }
 
