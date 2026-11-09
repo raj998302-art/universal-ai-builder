@@ -1,0 +1,6 @@
+{
+  "project_id": "proj_KdVTwCPhqaIO",
+  "file_path": "package.json",
+  "content": "{\n  \"name\": \"apexsaascloud\",\n  \"version\": \"1.0.0\",\n  \"private\": true,\n  \"type\": \"module\",\n  \"scripts\": {\n    \"dev\": \"vite\",\n    \"build\": \"vite build\",\n    \"preview\": \"vite preview\"\n  },\n  \"dependencies\": {\n    \"react\": \"^18.3.1\",\n    \"react-dom\": \"^18.3.1\"\n  },\n  \"devDependencies\": {\n    \"@types/react\": \"^18.3.3\",\n    \"@types/react-dom\": \"^18.3.0\",\n    \"@vitejs/plugin-react\": \"^4.3.1\",\n    \"typescript\": \"^5.4.5\",\n    \"vite\": \"^5.3.1\"\n  }\n}",
+  "updated_at": "2026-11-09T12:27:41.191Z"
+}
