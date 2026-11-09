@@ -1,0 +1,11 @@
+{
+  "id": "proj_8Kr5-SF6vS_V",
+  "user_id": "00000000-0000-0000-0000-000000000001",
+  "name": "ErrorRecoveryDemo",
+  "type": "web",
+  "description": "Project for testing automated AI compiler diagnosis and self-healing error recovery",
+  "config": {},
+  "created_at": "2026-11-09T12:27:18.243Z",
+  "updated_at": "2026-11-09T12:27:18.243Z",
+  "files": {}
+}
