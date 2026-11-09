@@ -1,0 +1,283 @@
+name: Cloud Build Worker
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_id:
+        description: 'Unique Build Job ID'
+        required: true
+        default: 'manual-test-build'
+      project_type:
+        description: 'Project type (flutter, android, web)'
+        required: true
+        type: choice
+        options:
+          - flutter
+          - android
+          - web
+      build_type:
+        description: 'Build target (apk, aab, web)'
+        required: true
+        type: choice
+        options:
+          - apk
+          - aab
+          - web
+      project_name:
+        description: 'Project Name'
+        required: false
+        default: 'SampleApp'
+      source_code:
+        description: 'Source code override (base64 JSON map of path->content)'
+        required: false
+        default: ''
+
+jobs:
+  build-flutter:
+    name: Build Flutter App (${{ github.event.inputs.build_type }})
+    if: github.event.inputs.project_type == 'flutter'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Set up Flutter SDK
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.5'
+          channel: 'stable'
+          cache: true
+
+      - name: Accept Android SDK licenses
+        run: yes | sdkmanager --licenses || true
+
+      - name: Create or prepare Flutter project
+        run: |
+          mkdir -p workspace
+          cd workspace
+          flutter create --org com.universalaibuilder --project-name ${{ github.event.inputs.project_name }} app
+          cd app
+          echo "Flutter project generated successfully"
+          flutter doctor -v
+
+      - name: Compile Flutter Release APK
+        if: github.event.inputs.build_type == 'apk'
+        run: |
+          cd workspace/app
+          flutter build apk --release --verbose
+          mkdir -p ../../output
+          cp build/app/outputs/flutter-apk/app-release.apk ../../output/${{ github.event.inputs.build_id }}_release.apk
+          ls -la ../../output/
+
+      - name: Compile Flutter Release AAB
+        if: github.event.inputs.build_type == 'aab'
+        run: |
+          cd workspace/app
+          flutter build appbundle --release --verbose
+          mkdir -p ../../output
+          cp build/app/outputs/bundle/release/app-release.aab ../../output/${{ github.event.inputs.build_id }}_release.aab
+          ls -la ../../output/
+
+      - name: Upload Output Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ github.event.inputs.build_id }}-${{ github.event.inputs.build_type }}
+          path: output/
+          retention-days: 7
+
+  build-native-android:
+    name: Build Native Android App
+    if: github.event.inputs.project_type == 'android'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Generate minimal Kotlin Android App
+        run: |
+          mkdir -p workspace/android-app
+          cd workspace/android-app
+
+          # settings.gradle
+          cat << 'EOF' > settings.gradle
+          rootProject.name = "NativeAndroidApp"
+          include ':app'
+          EOF
+
+          # build.gradle (root)
+          cat << 'EOF' > build.gradle
+          buildscript {
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+              dependencies {
+                  classpath 'com.android.tools.build:gradle:8.2.2'
+                  classpath 'org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.22'
+              }
+          }
+          allprojects {
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+          }
+          EOF
+
+          # app/build.gradle
+          mkdir -p app/src/main/java/com/universalaibuilder/app
+          mkdir -p app/src/main/res/values
+          cat << 'EOF' > app/build.gradle
+          plugins {
+              id 'com.android.application'
+              id 'org.jetbrains.kotlin.android'
+          }
+          android {
+              namespace 'com.universalaibuilder.app'
+              compileSdk 34
+              defaultConfig {
+                  applicationId "com.universalaibuilder.app"
+                  minSdk 24
+                  targetSdk 34
+                  versionCode 1
+                  versionName "1.0.0"
+              }
+              buildTypes {
+                  release {
+                      minifyEnabled false
+                  }
+              }
+              compileOptions {
+                  sourceCompatibility JavaVersion.VERSION_17
+                  targetCompatibility JavaVersion.VERSION_17
+              }
+              kotlinOptions {
+                  jvmTarget = '17'
+              }
+          }
+          dependencies {
+              implementation 'androidx.core:core-ktx:1.12.0'
+              implementation 'androidx.appcompat:appcompat:1.6.1'
+          }
+          EOF
+
+          # AndroidManifest.xml
+          cat << 'EOF' > app/src/main/AndroidManifest.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+              <application
+                  android:allowBackup="true"
+                  android:label="Universal Android App"
+                  android:supportsRtl="true"
+                  android:theme="@style/Theme.AppCompat.Light">
+                  <activity
+                      android:name=".MainActivity"
+                      android:exported="true">
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN" />
+                          <category android:name="android.intent.category.LAUNCHER" />
+                      </intent-filter>
+                  </activity>
+              </application>
+          </manifest>
+          EOF
+
+          # MainActivity.kt
+          cat << 'EOF' > app/src/main/java/com/universalaibuilder/app/MainActivity.kt
+          package com.universalaibuilder.app
+
+          import android.os.Bundle
+          import androidx.appcompat.app.AppCompatActivity
+          import android.widget.TextView
+
+          class MainActivity : AppCompatActivity() {
+              override fun onCreate(savedInstanceState: Bundle?) {
+                  super.onCreate(savedInstanceState)
+                  val textView = TextView(this).apply {
+                      text = "Universal AI Builder Native Android App"
+                      textSize = 20f
+                  }
+                  setContentView(textView)
+              }
+          }
+          EOF
+
+          # Gradle wrapper
+          gradle wrapper --gradle-version 8.7
+
+      - name: Build Native Android APK
+        if: github.event.inputs.build_type == 'apk'
+        run: |
+          cd workspace/android-app
+          ./gradlew assembleRelease --stacktrace
+          mkdir -p ../../output
+          cp app/build/outputs/apk/release/*.apk ../../output/${{ github.event.inputs.build_id }}_native_release.apk || cp app/build/outputs/apk/release/*-unsigned.apk ../../output/${{ github.event.inputs.build_id }}_native_release.apk
+          ls -la ../../output/
+
+      - name: Build Native Android AAB
+        if: github.event.inputs.build_type == 'aab'
+        run: |
+          cd workspace/android-app
+          ./gradlew bundleRelease --stacktrace
+          mkdir -p ../../output
+          cp app/build/outputs/bundle/release/*.aab ../../output/${{ github.event.inputs.build_id }}_native_release.aab
+          ls -la ../../output/
+
+      - name: Upload Output Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ github.event.inputs.build_id }}-${{ github.event.inputs.build_type }}
+          path: output/
+          retention-days: 7
+
+  build-web:
+    name: Build Web Application
+    if: github.event.inputs.project_type == 'web'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Generate minimal Web project
+        run: |
+          mkdir -p workspace/web-app
+          cd workspace/web-app
+          cat << 'EOF' > package.json
+          {
+            "name": "sample-web-app",
+            "version": "1.0.0",
+            "scripts": {
+              "build": "mkdir -p dist && echo '<html><body><h1>Universal AI Builder Test Web</h1></body></html>' > dist/index.html"
+            }
+          }
+          EOF
+          npm run build
+          mkdir -p ../../output
+          cd dist && zip -r ../../../output/${{ github.event.inputs.build_id }}_website.zip .
+
+      - name: Upload Output Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ github.event.inputs.build_id }}-web
+          path: output/
+          retention-days: 7

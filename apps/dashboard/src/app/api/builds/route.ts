@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
     });
   }
 
-  // Forward to Build Orchestrator
+  // 1. Forward to Build Orchestrator if running locally/privately
   const orchestratorUrl = process.env.BUILD_WORKER_URL || 'http://localhost:3002';
   try {
     const resp = await fetch(`${orchestratorUrl}/builds`, {
@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
         files: projectFiles,
         options,
       }),
-      signal: AbortSignal.timeout(4000),
+      signal: AbortSignal.timeout(3000),
     });
 
     if (resp.ok) {
@@ -98,7 +98,47 @@ export async function POST(request: NextRequest) {
       }, 202);
     }
   } catch (workerErr: any) {
-    console.warn(`[Build] Orchestrator unreachable at ${orchestratorUrl}: ${workerErr.message}. Queued locally.`);
+    // Orchestrator not directly connected, fall through to Cloud Build Worker
+  }
+
+  // 2. Dispatch to GitHub Actions Cloud Build Worker
+  const ghToken = process.env.GITHUB_TOKEN;
+  if (ghToken) {
+    try {
+      const ghResp = await fetch(
+        'https://api.github.com/repos/raj998302-art/universal-ai-builder/actions/workflows/build-worker.yml/dispatches',
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `token ${ghToken}`,
+            Accept: 'application/vnd.github.v3+json',
+            'Content-Type': 'application/json',
+            'User-Agent': 'universal-ai-builder',
+          },
+          body: JSON.stringify({
+            ref: 'main',
+            inputs: {
+              build_id: buildId,
+              project_type: projectType,
+              build_type: buildType,
+              project_name: 'UniversalApp',
+            },
+          }),
+        }
+      );
+
+      if (ghResp.ok || ghResp.status === 204) {
+        return successResponse({
+          buildId,
+          projectId,
+          type: buildType,
+          status: 'building',
+          message: 'Build successfully dispatched to Cloud Build Worker runner',
+        }, 202);
+      }
+    } catch (ghErr: any) {
+      console.warn('GitHub dispatch error:', ghErr.message);
+    }
   }
 
   return successResponse({

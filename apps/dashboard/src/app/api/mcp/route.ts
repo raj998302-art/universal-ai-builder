@@ -376,6 +376,37 @@ async function executeTool(name: string, args: any, user: any) {
         if (res.ok) workerRes = await res.json();
       } catch {}
 
+      // Dispatch to GitHub Actions Cloud Build Worker if token available
+      const ghToken = process.env.GITHUB_TOKEN;
+      if (ghToken && !workerRes) {
+        try {
+          const ghResp = await fetch(
+            'https://api.github.com/repos/raj998302-art/universal-ai-builder/actions/workflows/build-worker.yml/dispatches',
+            {
+              method: 'POST',
+              headers: {
+                Authorization: `token ${ghToken}`,
+                Accept: 'application/vnd.github.v3+json',
+                'Content-Type': 'application/json',
+                'User-Agent': 'universal-ai-builder',
+              },
+              body: JSON.stringify({
+                ref: 'main',
+                inputs: {
+                  build_id: buildId,
+                  project_type: name.includes('flutter') ? 'flutter' : name.includes('android') ? 'android' : 'web',
+                  build_type: bType,
+                  project_name: 'UniversalApp',
+                },
+              }),
+            }
+          );
+          if (ghResp.ok || ghResp.status === 204) {
+            workerRes = { status: 'building' };
+          }
+        } catch {}
+      }
+
       const jobRecord = {
         id: buildId,
         project_id: projectId,
