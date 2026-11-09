@@ -1,0 +1,6 @@
+{
+  "project_id": "proj_jOzIdMepYVNX",
+  "file_path": "app/src/main/res/values/themes.xml",
+  "content": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<resources>\n    <style name=\"Theme.App\" parent=\"Theme.MaterialComponents.DayNight.NoActionBar\">\n        <item name=\"colorPrimary\">@color/primary</item>\n        <item name=\"colorPrimaryDark\">@color/primary_dark</item>\n        <item name=\"colorAccent\">@color/accent</item>\n        <item name=\"android:windowBackground\">@color/background</item>\n    </style>\n</resources>\n",
+  "updated_at": "2026-11-09T12:09:08.667Z"
+}
