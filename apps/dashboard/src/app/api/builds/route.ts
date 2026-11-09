@@ -121,7 +121,7 @@ export async function POST(request: NextRequest) {
               build_id: buildId,
               project_type: projectType,
               build_type: buildType,
-              project_name: 'UniversalApp',
+              project_name: 'universal_app',
             },
           }),
         }

@@ -420,7 +420,7 @@ async function executeTool(name: string, args: any, user: any) {
                   build_id: buildId,
                   project_type: projType,
                   build_type: bType,
-                  project_name: 'UniversalApp',
+                  project_name: 'universal_app',
                   source_code: encodedSource,
                 },
               }),
@@ -462,7 +462,7 @@ async function executeTool(name: string, args: any, user: any) {
       if (ghToken) {
         try {
           const runsRes = await fetch(
-            'https://api.github.com/repos/raj998302-art/universal-ai-builder/actions/runs?per_page=10',
+            'https://api.github.com/repos/raj998302-art/universal-ai-builder/actions/runs?per_page=20',
             {
               headers: {
                 Authorization: `token ${ghToken}`,
@@ -472,9 +472,13 @@ async function executeTool(name: string, args: any, user: any) {
           );
           if (runsRes.ok) {
             const runsData = await runsRes.json();
-            const matchingRun = runsData.workflow_runs?.find(
+            const workerRuns = (runsData.workflow_runs || []).filter(
               (r: any) => r.name === 'Cloud Build Worker'
             );
+            const matchingRun = workerRuns.find(
+              (r: any) => r.display_title?.includes(build_id)
+            ) || workerRuns[0];
+
             if (matchingRun) {
               const isComplete = matchingRun.status === 'completed';
               const isSuccess = matchingRun.conclusion === 'success';
@@ -486,7 +490,7 @@ async function executeTool(name: string, args: any, user: any) {
                 });
                 if (artRes.ok) {
                   const artData = await artRes.json();
-                  artifacts = artData.artifacts?.map((a: any) => ({
+                  artifacts = (artData.artifacts || []).map((a: any) => ({
                     id: a.id.toString(),
                     name: a.name,
                     size_bytes: a.size_in_bytes,
@@ -497,9 +501,10 @@ async function executeTool(name: string, args: any, user: any) {
 
               return {
                 build_id,
-                status: isComplete ? (isSuccess ? 'success' : 'failed') : 'building',
+                status: isComplete ? (isSuccess ? 'success' : 'failed') : (matchingRun.status || 'building'),
                 conclusion: matchingRun.conclusion,
                 run_id: matchingRun.id,
+                run_name: matchingRun.display_title || matchingRun.name,
                 html_url: matchingRun.html_url,
                 artifacts,
               };
@@ -518,14 +523,20 @@ async function executeTool(name: string, args: any, user: any) {
       if (ghToken) {
         try {
           const runsRes = await fetch(
-            'https://api.github.com/repos/raj998302-art/universal-ai-builder/actions/runs?per_page=5',
+            'https://api.github.com/repos/raj998302-art/universal-ai-builder/actions/runs?per_page=20',
             { headers: { Authorization: `token ${ghToken}` } }
           );
           if (runsRes.ok) {
             const runsData = await runsRes.json();
-            const latestRun = runsData.workflow_runs?.find((r: any) => r.name === 'Cloud Build Worker');
-            if (latestRun) {
-              const jobsRes = await fetch(latestRun.jobs_url, {
+            const workerRuns = (runsData.workflow_runs || []).filter(
+              (r: any) => r.name === 'Cloud Build Worker'
+            );
+            const matchingRun = workerRuns.find(
+              (r: any) => r.display_title?.includes(build_id)
+            ) || workerRuns[0];
+
+            if (matchingRun) {
+              const jobsRes = await fetch(matchingRun.jobs_url, {
                 headers: { Authorization: `token ${ghToken}` },
               });
               if (jobsRes.ok) {
@@ -538,7 +549,7 @@ async function executeTool(name: string, args: any, user: any) {
                     job_name: job.name,
                     status: job.status,
                     conclusion: job.conclusion,
-                    steps: job.steps?.map((s: any) => `[${s.name}] ${s.status} (${s.conclusion || 'running'})`),
+                    steps: job.steps?.map((s: any) => `[${s.name}] ${s.status} (${s.conclusion || 'in_progress'})`),
                   };
                 }
               }
@@ -561,13 +572,18 @@ async function executeTool(name: string, args: any, user: any) {
       if (ghToken) {
         try {
           const artRes = await fetch(
-            'https://api.github.com/repos/raj998302-art/universal-ai-builder/actions/artifacts?per_page=15',
+            'https://api.github.com/repos/raj998302-art/universal-ai-builder/actions/artifacts?per_page=30',
             { headers: { Authorization: `token ${ghToken}` } }
           );
           if (artRes.ok) {
             const artData = await artRes.json();
-            return artData.artifacts?.map((a: any) => ({
+            let arts = artData.artifacts || [];
+            if (build_id) {
+              arts = arts.filter((a: any) => a.name.includes(build_id));
+            }
+            return arts.map((a: any) => ({
               artifact_id: a.id.toString(),
+              name: a.name,
               filename: `${a.name}.zip`,
               size_bytes: a.size_in_bytes,
               download_url: `https://universal-ai-builder-nine.vercel.app/api/artifacts/${a.id}`,

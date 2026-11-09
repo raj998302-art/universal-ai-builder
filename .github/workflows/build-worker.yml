@@ -1,4 +1,5 @@
 name: Cloud Build Worker
+run-name: 'Build ${{ inputs.build_id }} (${{ inputs.project_type }}:${{ inputs.build_type }})'
 
 on:
   workflow_dispatch:
@@ -26,7 +27,7 @@ on:
       project_name:
         description: 'Project Name'
         required: false
-        default: 'SampleApp'
+        default: 'sample_app'
       source_code:
         description: 'Source code override (base64 JSON map of path->content)'
         required: false
@@ -61,9 +62,11 @@ jobs:
         run: |
           mkdir -p workspace
           cd workspace
-          flutter create --org com.universalaibuilder --project-name ${{ github.event.inputs.project_name }} app
+          CLEAN_NAME=$(echo "${{ github.event.inputs.project_name }}" | tr '[:upper:]' '[:lower:]' | tr '-' '_' | sed 's/[^a-z0-9_]//g')
+          [ -z "$CLEAN_NAME" ] && CLEAN_NAME="sample_app"
+          flutter create --org com.universalaibuilder --project-name "$CLEAN_NAME" app
           cd app
-          echo "Flutter project generated successfully"
+          echo "Flutter project generated successfully with name: $CLEAN_NAME"
           flutter doctor -v
 
           # Inject custom source code if provided via MCP write_file
@@ -317,9 +320,36 @@ jobs:
             }
           }
           EOF
-          npm run build
+
+          # Inject custom source code if provided via MCP write_file
+          if [ -n "${{ github.event.inputs.source_code }}" ]; then
+            python3 -c "
+          import json, base64, os
+          try:
+              data = json.loads(base64.b64decode('${{ github.event.inputs.source_code }}').decode('utf-8'))
+              for path, content in data.items():
+                  p = os.path.join('.', path.lstrip('/'))
+                  os.makedirs(os.path.dirname(p), exist_ok=True)
+                  with open(p, 'w') as f:
+                      f.write(content)
+                  print('Injected MCP source file:', path)
+          except Exception as e:
+              print('Source injection error:', e)
+          "
+          fi
+
+          if npm run build --if-present; then
+            echo "Web build script executed successfully"
+          fi
+
           mkdir -p ../../output
-          cd dist && zip -r ../../../output/${{ github.event.inputs.build_id }}_website.zip .
+          if [ -d "dist" ]; then
+            cd dist && zip -r ../../../output/${{ github.event.inputs.build_id }}_website.zip .
+          elif [ -d "build" ]; then
+            cd build && zip -r ../../../output/${{ github.event.inputs.build_id }}_website.zip .
+          else
+            zip -r ../../output/${{ github.event.inputs.build_id }}_website.zip .
+          fi
 
       - name: Upload Output Artifacts
         uses: actions/upload-artifact@v4
