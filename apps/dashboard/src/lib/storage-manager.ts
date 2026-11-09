@@ -30,6 +30,7 @@ async function gitSaveFile(path: string, content: string, message: string): Prom
   const token = process.env.GITHUB_TOKEN;
   if (!token) return false;
   try {
+    const commitMsg = message.includes('[skip ci]') ? message : `${message} [skip ci]`;
     // Get existing file sha if it exists
     let sha: string | undefined;
     const getRes = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/${path}`, {
@@ -44,7 +45,7 @@ async function gitSaveFile(path: string, content: string, message: string): Prom
     }
 
     const body: any = {
-      message,
+      message: commitMsg,
       content: Buffer.from(content).toString('base64'),
     };
     if (sha) body.sha = sha;
@@ -196,16 +197,14 @@ export async function saveProject(project: Project): Promise<void> {
     }
   }
 
-  // 3. Persist to GitHub storage
-  try {
-    await gitSaveFile(
-      `data/projects/${project.id}.json`,
-      JSON.stringify(project, null, 2),
-      `chore: sync project ${project.id} metadata`
-    );
-  } catch (err) {
+  // 3. Persist to GitHub storage (non-blocking)
+  gitSaveFile(
+    `data/projects/${project.id}.json`,
+    JSON.stringify(project, null, 2),
+    `chore: sync project ${project.id} metadata`
+  ).catch(err => {
     console.error('GitHub storage sync error:', err);
-  }
+  });
 }
 
 export async function deleteProject(id: string): Promise<boolean> {
@@ -320,15 +319,13 @@ export async function saveFile(projectId: string, filePath: string, content: str
     } catch {}
   }
 
-  // 3. GitHub storage
+  // 3. GitHub storage (non-blocking background sync)
   const encodedPath = Buffer.from(filePath).toString('hex');
-  try {
-    await gitSaveFile(
-      `data/files/${projectId}/${encodedPath}.json`,
-      JSON.stringify(file, null, 2),
-      `chore: save file ${filePath} in ${projectId}`
-    );
-  } catch {}
+  gitSaveFile(
+    `data/files/${projectId}/${encodedPath}.json`,
+    JSON.stringify(file, null, 2),
+    `chore: save file ${filePath} in ${projectId}`
+  ).catch(() => {});
 
   return file;
 }
