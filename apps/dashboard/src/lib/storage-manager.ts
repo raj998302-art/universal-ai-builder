@@ -1,5 +1,6 @@
 import { query, isDatabaseAvailable } from './db';
 import { memoryStore, Project, ProjectFile, BuildJob, Artifact } from './store';
+export type { Project, ProjectFile, BuildJob, Artifact };
 
 const GITHUB_REPO = 'raj998302-art/universal-ai-builder';
 

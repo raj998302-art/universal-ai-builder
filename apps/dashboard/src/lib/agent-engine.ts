@@ -13,8 +13,8 @@ import {
   listProjectFiles,
   saveBuildJob,
   getBuildJob,
-  Project,
 } from './storage-manager';
+import type { Project } from './store';
 import { generateWebsiteProject } from './ai-generator';
 import { generateNativeAndroidApp } from './android-generator';
 
