@@ -292,6 +292,7 @@ export function generateWebsiteProject(prompt: string, customName?: string): Gen
   </style>
 </head>
 <body>
+  <div id="root">
   <div class="glow-orb glow-1"></div>
   <div class="glow-orb glow-2"></div>
 
@@ -416,6 +417,8 @@ export function generateWebsiteProject(prompt: string, customName?: string): Gen
       toggleCart();
     }
   </script>
+  </div>
+  <script type="module" src="/src/main.tsx"></script>
 </body>
 </html>`;
 

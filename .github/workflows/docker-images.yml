@@ -12,11 +12,15 @@ on:
   push:
     branches:
       - main
-    tags:
-      - 'v*'
+    paths:
+      - 'docker/**'
+      - '.github/workflows/docker-images.yml'
   pull_request:
     branches:
       - main
+    paths:
+      - 'docker/**'
+      - '.github/workflows/docker-images.yml'
   workflow_dispatch:
     inputs:
       image:
