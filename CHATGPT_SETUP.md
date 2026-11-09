@@ -1,71 +1,118 @@
-# ChatGPT MCP Integration Guide & Specification
+# ChatGPT Integration Guide: Custom GPT Actions vs. Remote MCP
 **Universal AI App & Website Builder Platform**  
-**Endpoint:** `https://universal-ai-builder-nine.vercel.app/api/mcp`  
-**OAuth 2.1 Server Metadata:** `https://universal-ai-builder-nine.vercel.app/.well-known/oauth-authorization-server`
+**Production Gateway:** `https://universal-ai-builder-nine.vercel.app`  
+**OpenAPI Specification:** `https://universal-ai-builder-nine.vercel.app/api/openapi.json`  
+**Remote MCP Endpoint:** `https://universal-ai-builder-nine.vercel.app/api/mcp`  
+**OAuth 2.1 Metadata:** `https://universal-ai-builder-nine.vercel.app/.well-known/oauth-authorization-server`
 
 ---
 
-## 1. Overview & Architecture
+## 1. Executive Summary & Dual Integration Architecture
 
-Universal AI Builder provides a native, multi-transport Model Context Protocol (MCP) server designed to connect seamlessly with OpenAI ChatGPT through both **Remote MCP (Streamable HTTP / SSE)** and **Custom GPT Actions (OpenAPI / JSON-RPC gateway)**.
-
-Through this integration, ChatGPT users can converse naturally to:
-- Generate complete React, Next.js, Flutter, and native Android Kotlin applications.
-- Inspect, edit, and search workspace files.
-- Trigger real cloud Android compilation (`flutter build apk`, `flutter build appbundle`, `gradle assembleRelease`, `gradle bundleRelease`).
-- Inspect live build logs and diagnose compilation errors.
-- Retrieve signed download links for compiled APKs and AAB bundles.
+To provide maximum compatibility across all OpenAI ChatGPT interfaces, Universal AI Builder supports two distinct architectural integration methods:
 
 ```mermaid
-sequenceDiagram
-    autonumber
-    actor User as ChatGPT User
-    participant ChatGPT as OpenAI ChatGPT
-    participant Gateway as MCP Endpoint (/api/mcp)
-    participant Storage as Multi-Tier Storage (GitHub / Neon)
-    participant Worker as Cloud Build Worker (GitHub Actions)
+flowchart TD
+    User["OpenAI ChatGPT User"]
+    
+    subgraph Method_A["Approach A: ChatGPT Custom GPT Actions (REST / OpenAPI 3.1)"]
+        GPT_Editor["Custom GPT Action Engine"]
+        OpenAPI_Spec["OpenAPI 3.1.0 Manifest (/api/openapi.json)"]
+        REST_Endpoints["REST Endpoints (/api/projects, /api/builds, /api/preview/{id})"]
+    end
 
-    User->>ChatGPT: "Build a Flutter E-commerce app and give me the APK"
-    ChatGPT->>Gateway: tools/call: generate_application { template: "flutter", prompt: "..." }
-    Gateway->>Storage: Persist project files & metadata
-    Gateway-->>ChatGPT: Result: Project "ecom_app" created with 5 files
-    ChatGPT->>Gateway: tools/call: build_flutter_apk { projectId: "ecom_app" }
-    Gateway->>Worker: Dispatch workflow: flutter-apk
-    Gateway-->>ChatGPT: Result: Build initiated (buildId: build_17...)
-    ChatGPT->>Gateway: tools/call: get_build_status { buildId: "build_17..." }
-    Gateway-->>ChatGPT: Result: status "success", downloadUrl: "https://..."
-    ChatGPT-->>User: Provides direct APK download link and SHA-256 hash
+    subgraph Method_B["Approach B: ChatGPT Remote MCP (Streamable HTTP / JSON-RPC 2.0)"]
+        MCP_Client["Developer MCP Connector / Agent SDK"]
+        OAuth_Auth["OAuth 2.1 / PKCE Authorization Gateway"]
+        MCP_Gateway["MCP JSON-RPC 2.0 Gateway (/api/mcp)"]
+    end
+
+    User --> GPT_Editor
+    GPT_Editor --> OpenAPI_Spec
+    OpenAPI_Spec --> REST_Endpoints
+
+    User --> MCP_Client
+    MCP_Client --> OAuth_Auth
+    OAuth_Auth --> MCP_Gateway
 ```
 
----
-
-## 2. ChatGPT Plan Compatibility Matrix
-
-Different ChatGPT plans have distinct integration capabilities:
-
-| Feature / Capability | ChatGPT Free | ChatGPT Plus | ChatGPT Team / Enterprise | Developer API / Custom GPTs |
-| :--- | :---: | :---: | :---: | :---: |
-| **Custom GPT Creation** | View Only | Full Access | Full Access with Org Controls | Full Access |
-| **Custom Actions (HTTP API)** | ❌ No | ✅ Supported | ✅ Supported | ✅ Supported |
-| **Bearer Token Auth** | ❌ No | ✅ Supported | ✅ Supported | ✅ Supported |
-| **OAuth 2.1 Authorization Code** | ❌ No | ✅ Supported | ✅ Supported | ✅ Supported |
-| **Direct Streamable MCP Client** | ❌ No | Beta / Connectors | Beta / Connectors | Supported via MCP Proxy / SDK |
-| **Interactive Tool Confirmation** | N/A | Prompted per write | Configurable per org | Configurable |
-
 > [!IMPORTANT]
-> Standard consumer ChatGPT on `chatgpt.com` does not currently provide a generic raw terminal or CLI for local stdio MCP servers. Remote MCP connects either via **Custom GPT Actions** or via ChatGPT's new **Developer Connectors / MCP Plugin** interface using the HTTPS endpoint.
+> **Architectural Distinction:**  
+> - **Custom GPT Actions** use standard RESTful HTTP with an OpenAPI 3.1 schema. This is **not** native MCP, but it is currently the most widely available method for standard `chatgpt.com` consumer users.
+> - **Remote MCP** uses the Model Context Protocol (`2024-11-05`) over Streamable HTTP with JSON-RPC 2.0 payloads (`initialize`, `tools/list`, `tools/call`). It is supported via ChatGPT Developer Connectors, the OpenAI Agents SDK, and external MCP clients (Cursor, Claude Desktop, Gemini CLI).
 
 ---
 
-## 3. Remote MCP & Streamable HTTP Protocol Details
+## 2. ChatGPT Plan & Interface Compatibility Matrix
 
-### Transport Endpoints
-- **HTTP POST (JSON-RPC 2.0):** `https://universal-ai-builder-nine.vercel.app/api/mcp`
-- **Server-Sent Events (SSE):** `https://universal-ai-builder-nine.vercel.app/api/mcp` (via `Accept: text/event-stream` or `GET`)
+| Integration Interface | ChatGPT Free | ChatGPT Plus ($20/mo) | ChatGPT Team / Enterprise | OpenAI Developer API / Agents SDK |
+| :--- | :---: | :---: | :---: | :---: |
+| **Approach A: Custom GPT Actions** | ❌ (View only) | ✅ Full Support | ✅ Full Support (with Org Controls) | ✅ Full Support |
+| **OpenAPI 3.1 Import** | ❌ | ✅ Supported | ✅ Supported | ✅ Supported |
+| **Bearer Key Authentication** | ❌ | ✅ Supported | ✅ Supported | ✅ Supported |
+| **Approach B: Native Remote MCP** | ❌ | ⚠️ Beta Connectors | ⚠️ Beta Connectors | ✅ Native Support via SDK / Proxy |
+| **OAuth 2.1 Code Flow + PKCE** | ❌ | ✅ Supported | ✅ Supported | ✅ Supported |
+| **Live Web App Preview** | ❌ | ✅ In-Chat Browser Link | ✅ In-Chat Browser Link | ✅ Full API Payload |
+| **Cloud APK/AAB Compilation** | ❌ | ✅ Real Builds | ✅ Real Builds | ✅ Real Builds |
 
-### Protocol Handshake (`initialize`)
-ChatGPT initiates connection by exchanging client and server capabilities:
+---
 
+## 3. Approach A: ChatGPT Custom GPT Actions (OpenAPI 3.1)
+
+This approach connects ChatGPT using standard OpenAI Custom Actions.
+
+### Specification & Credentials
+- **OpenAPI Schema URL:** `https://universal-ai-builder-nine.vercel.app/api/openapi.json`
+- **Authentication Method:** API Key
+- **Auth Type:** `Bearer`
+- **Header Name:** `Authorization`
+
+### Setup Steps in ChatGPT:
+1. Navigate to **ChatGPT** > **Explore GPTs** > **Create a GPT** (`https://chatgpt.com/gpts/editor`).
+2. In the **Configure** tab:
+   - **Name:** `Universal AI Builder`
+   - **Description:** `Autonomous Full-Stack Web & Android App Generator with Real Cloud Compilation.`
+   - **Instructions:**
+     ```markdown
+     You are the Universal AI Builder Agent. You have direct access to a cloud build platform.
+     When the user asks to build an app or website:
+     1. Create a project using POST /api/projects.
+     2. Trigger a build using POST /api/builds (with type: apk, aab, or web).
+     3. Poll GET /api/builds/{id} until status is 'success'.
+     4. Return the download URL and preview URL (/api/preview/{id}) to the user.
+     ```
+3. Scroll down to **Actions** and click **Create new action**.
+4. In **Authentication**:
+   - Choose **API Key**.
+   - Auth Type: **Bearer**.
+   - Token: Paste your API Key (`uab_sec_...`).
+5. In **Schema**, click **Import from URL** and paste:
+   `https://universal-ai-builder-nine.vercel.app/api/openapi.json`
+6. Click **Import**. ChatGPT parses all endpoints (`/api/projects`, `/api/builds`, `/api/preview/{id}`, `/api/health`).
+7. Save and Publish to **Only me** or your workspace.
+
+### Testing Custom GPT Actions:
+In the preview chat pane, enter:
+> *"Create a new web project called NexusDashboard and verify its health."*
+
+ChatGPT executes:
+1. `GET /api/health` -> returns `{"status":"ok"}`.
+2. `POST /api/projects` -> returns `{ "id": "proj_...", "name": "NexusDashboard", "status": "created" }`.
+
+---
+
+## 4. Approach B: ChatGPT Remote MCP (Streamable HTTP)
+
+This approach connects ChatGPT via the official Model Context Protocol using Streamable HTTP.
+
+### Protocol Endpoints
+- **Streamable HTTP POST:** `https://universal-ai-builder-nine.vercel.app/api/mcp`
+- **SSE Stream:** `https://universal-ai-builder-nine.vercel.app/api/mcp` (Header: `Accept: text/event-stream`)
+- **OAuth 2.1 Metadata:** `https://universal-ai-builder-nine.vercel.app/.well-known/oauth-authorization-server`
+- **Protocol Version:** `2024-11-05`
+- **Server Info:** `universal-ai-builder` v2.0.0
+
+### Step 1: Protocol Handshake (`initialize`)
 ```json
 {
   "jsonrpc": "2.0",
@@ -78,14 +125,13 @@ ChatGPT initiates connection by exchanging client and server capabilities:
       "sampling": {}
     },
     "clientInfo": {
-      "name": "ChatGPT-Client",
+      "name": "ChatGPT-Remote-MCP",
       "version": "1.0.0"
     }
   }
 }
 ```
-
-**Response:**
+**Response (200 OK):**
 ```json
 {
   "jsonrpc": "2.0",
@@ -93,11 +139,52 @@ ChatGPT initiates connection by exchanging client and server capabilities:
   "result": {
     "protocolVersion": "2024-11-05",
     "capabilities": {
-      "tools": { "listChanged": true }
+      "tools": { "listChanged": false },
+      "prompts": {},
+      "resources": {}
     },
     "serverInfo": {
-      "name": "universal-ai-builder-mcp",
+      "name": "universal-ai-builder",
       "version": "2.0.0"
+    }
+  }
+}
+```
+
+### Step 2: Tool Discovery (`tools/list`)
+Client discovers all 29 tools including `generate_website`, `build_website`, `build_flutter_apk`, `get_build_status`, etc.
+
+### Step 3: Tool Invocation (`tools/call`)
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "method": "tools/call",
+  "params": {
+    "name": "generate_website",
+    "arguments": {
+      "prompt": "Modern SaaS telemetry dashboard with dark theme and interactive analytics",
+      "name": "SaaSTelemetry"
+    }
+  }
+}
+```
+**Response (200 OK):**
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\n  \"project_id\": \"proj_...\",\n  \"type\": \"web\",\n  \"files_generated\": 12,\n  \"preview_url\": \"https://universal-ai-builder-nine.vercel.app/api/preview/proj_...\"\n}"
+      }
+    ],
+    "structuredContent": {
+      "project_id": "proj_...",
+      "type": "web",
+      "files_generated": 12
     }
   }
 }
@@ -105,77 +192,25 @@ ChatGPT initiates connection by exchanging client and server capabilities:
 
 ---
 
-## 4. Authentication & Authorization
+## 5. Security & Human-in-the-Loop Safeguards
 
-### Option A: Bearer API Key (Recommended for Custom GPTs)
-Pass the authorization token in the HTTP header:
-```http
-Authorization: Bearer uab_live_...
-```
+To prevent accidental data deletion or unauthorized compilation spend, the MCP server enforces strict authorization policies:
 
-### Option B: OAuth 2.1 Authorization Code Flow
-For enterprise ChatGPT installations requiring per-user interactive authorization:
-1. **Metadata Endpoint:** `https://universal-ai-builder-nine.vercel.app/.well-known/oauth-authorization-server`
-2. **Authorization Endpoint:** `https://universal-ai-builder-nine.vercel.app/api/auth/authorize`
-3. **Token Endpoint:** `https://universal-ai-builder-nine.vercel.app/api/auth/token`
-4. **Supported Grant Types:** `authorization_code`, `refresh_token`
-5. **Code Challenge Methods:** `S256` (PKCE required)
-
----
-
-## 5. Setting Up a Custom GPT in ChatGPT
-
-Follow these steps to connect Universal AI Builder as a dedicated Custom GPT:
-
-### Step 1: Open GPT Editor
-1. Navigate to [chatgpt.com/gpts/editor](https://chatgpt.com/gpts/editor).
-2. Click **Create a GPT**.
-3. In the **Configure** tab, set:
-   - **Name:** `Universal App & Web Builder`
-   - **Description:** `Builds full-stack websites, Flutter apps, and native Android APKs/AABs with live cloud compilation.`
-   - **Instructions:**
-     ```markdown
-     You are the Universal App & Website Builder Agent. You have direct access to a production cloud build system through your MCP tools.
-     When the user asks to create an app or website:
-     1. Use `generate_application` or `generate_website` to scaffold all source code.
-     2. Use `list_files` and `read_file` to review project code.
-     3. Use `build_flutter_apk`, `build_flutter_aab`, `build_android_apk`, `build_android_aab`, or `build_website` to start cloud builds.
-     4. Poll `get_build_status` until the build is marked 'success'.
-     5. Call `download_artifact` to provide the final download link and display the SHA-256 hash to the user.
-     Always ask user confirmation before deleting files or triggering production builds.
-     ```
-
-### Step 2: Configure Actions / MCP Gateway
-1. Scroll down to **Actions** and click **Create new action**.
-2. In the **Authentication** dropdown:
-   - Select **API Key**.
-   - Auth Type: **Bearer**.
-   - Paste your Universal AI Builder API key (from `/dashboard/api-keys`).
-3. For the Schema, import the OpenAPI / MCP gateway schema hosted at:
-   `https://universal-ai-builder-nine.vercel.app/api/openapi.json`
-   (Or paste the JSON-RPC action manifest).
-
-### Step 3: Test and Publish
-- Test the action by typing: *"Create a counter app in Flutter and compile the APK."*
-- Click **Save** > **Publish to Only me / Anyone with link / Everyone**.
-
----
-
-## 6. Write Operation Permissions & Human-in-the-Loop Controls
-
-To prevent unintended modifications, the Universal AI Builder MCP server categorizes tools by risk profile:
-
-| Risk Level | Tools | Security Enforcement |
+| Action Category | Examples | Authorization Policy |
 | :--- | :--- | :--- |
-| **Read-Only** | `list_projects`, `get_project`, `read_file`, `list_files`, `search_files`, `get_build_status`, `get_build_logs`, `list_artifacts`, `download_artifact`, `explain_project`, `analyze_project` | Automatically allowed without prompts |
-| **Safe Write** | `create_project`, `clone_project`, `generate_application`, `generate_website`, `modify_application`, `install_dependencies`, `write_file`, `edit_file`, `fix_build_errors` | Executed within user's isolated project scope |
-| **High-Impact Write** | `delete_project`, `delete_file`, `cancel_build`, `build_flutter_apk`, `build_flutter_aab`, `build_android_apk`, `build_android_aab`, `build_website` | Custom GPT requests explicit user confirmation button before invocation |
+| **Read Operations** | `list_projects`, `get_project`, `read_file`, `list_files`, `get_build_status`, `list_artifacts` | Automatically executed without prompt |
+| **Safe Write Operations** | `create_project`, `write_file`, `edit_file`, `generate_application`, `generate_website` | Executed within user-isolated project sandbox |
+| **High-Impact Operations** | `delete_project`, `delete_file`, `build_flutter_apk`, `build_android_apk`, `build_website` | Explicit interactive user confirmation requested |
 
 ---
 
-## 7. Troubleshooting & FAQs
+## 6. Verification Checklist
 
-- **Q: ChatGPT says "Could not connect to the tool"?**  
-  Ensure that the Vercel deployment is active at `https://universal-ai-builder-nine.vercel.app` and that `/api/health` returns status `200 OK`.
-- **Q: How long do builds take?**  
-  Web builds complete in ~15-30 seconds. Flutter and Native Android APK/AAB builds complete in ~2-4 minutes on GitHub Actions runners. Instruct ChatGPT to poll every 10 seconds.
+- [x] OpenAPI 3.1.0 specification validated at `/api/openapi.json`.
+- [x] Bearer Authentication operational across all REST endpoints.
+- [x] Streamable HTTP `HEAD` and `POST` handlers operational at `/api/mcp`.
+- [x] Protocol Handshake (`initialize`) verified with Protocol `2024-11-05`.
+- [x] Tool Discovery (`tools/list`) verified with all 29 production tools.
+- [x] Tool Invocation (`tools/call`) validated with `structuredContent` record wrapper.
+- [x] OAuth 2.1 metadata available at `/.well-known/oauth-authorization-server`.
+- [x] All secrets masked in documentation and logs.
