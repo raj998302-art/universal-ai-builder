@@ -10,6 +10,7 @@ export function middleware(request: NextRequest) {
     !pathname.startsWith('/api/auth') &&
     !pathname.startsWith('/api/preview') &&
     !pathname.startsWith('/api/mcp') &&
+    !pathname.startsWith('/api/openapi.json') &&
     !request.nextUrl.searchParams.has('key')
   ) {
     const authHeader = request.headers.get('authorization');

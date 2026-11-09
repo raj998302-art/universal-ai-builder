@@ -949,13 +949,20 @@ async function executeTool(name: string, args: any, user: any) {
   }
 }
 
+// ── HEAD: Protocol Probe Handler (Gemini CLI / Streamable HTTP) ────
+export async function HEAD(request: NextRequest) {
+  return new NextResponse(null, {
+    status: 200,
+    headers: {
+      'Content-Type': 'application/json',
+      'X-MCP-Version': '2.0.0',
+      'X-MCP-Protocol': '2024-11-05',
+    },
+  });
+}
+
 // ── GET: SSE transport or Tool Listing ──────────────────────────
 export async function GET(request: NextRequest) {
-  const user = await authenticateRequest(request);
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized', message: 'API key required' }, { status: 401 });
-  }
-
   // Check if SSE transport requested
   const acceptHeader = request.headers.get('accept') || '';
   if (acceptHeader.includes('text/event-stream')) {
@@ -995,14 +1002,6 @@ export async function GET(request: NextRequest) {
 
 // ── POST: JSON-RPC 2.0 MCP Message Handler ───────────────────────
 export async function POST(request: NextRequest) {
-  const user = await authenticateRequest(request);
-  if (!user) {
-    return NextResponse.json(
-      { jsonrpc: '2.0', error: { code: -32000, message: 'Unauthorized. Provide Bearer API key.' }, id: null },
-      { status: 401 }
-    );
-  }
-
   let body: any;
   try {
     body = await request.json();
@@ -1014,6 +1013,9 @@ export async function POST(request: NextRequest) {
   }
 
   const { id = 1, method, params } = body;
+
+  // Authenticate user
+  const user = await authenticateRequest(request);
 
   switch (method) {
     case 'initialize':
@@ -1039,6 +1041,12 @@ export async function POST(request: NextRequest) {
       });
 
     case 'tools/call': {
+      if (!user) {
+        return NextResponse.json(
+          { jsonrpc: '2.0', error: { code: -32000, message: 'Unauthorized. Provide Bearer API key.' }, id },
+          { status: 401 }
+        );
+      }
       const toolName = params?.name;
       const toolArgs = params?.arguments || {};
       try {

@@ -347,17 +347,28 @@ jobs:
           "
           fi
 
-          # Execute build script (will fail immediately on build errors)
-          npm run build
+          # Install dependencies and execute production build
+          if [ -f "package.json" ]; then
+            echo "Installing project dependencies..."
+            npm install
+            echo "Executing production build..."
+            npm run build
+          fi
 
           mkdir -p ../../output
           if [ -d "dist" ]; then
+            echo "Packaging dist/ directory into production website ZIP..."
             cd dist && zip -r ../../../output/${{ github.event.inputs.build_id }}_website.zip .
           elif [ -d "build" ]; then
+            echo "Packaging build/ directory into production website ZIP..."
             cd build && zip -r ../../../output/${{ github.event.inputs.build_id }}_website.zip .
+          elif [ -d "out" ]; then
+            echo "Packaging out/ directory into production website ZIP..."
+            cd out && zip -r ../../../output/${{ github.event.inputs.build_id }}_website.zip .
           else
             zip -r ../../output/${{ github.event.inputs.build_id }}_website.zip .
           fi
+          ls -lh ../../output/
 
       - name: Upload Output Artifacts
         uses: actions/upload-artifact@v4

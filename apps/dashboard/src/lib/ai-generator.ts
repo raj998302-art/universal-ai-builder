@@ -419,31 +419,888 @@ export function generateWebsiteProject(prompt: string, customName?: string): Gen
 </body>
 </html>`;
 
-  // package.json for npm build compatibility
-  const packageJson = JSON.stringify({
-    name: cleanName.toLowerCase().replace(/[^a-z0-9_-]/g, '-'),
-    version: '1.0.0',
-    private: true,
-    scripts: {
-      build: 'mkdir -p dist && cp index.html dist/index.html && cp README.md dist/ 2>/dev/null || true',
+  // 1. package.json for Vite + React 18 production compilation
+  const packageJson = JSON.stringify(
+    {
+      name: cleanName.toLowerCase().replace(/[^a-z0-9_-]/g, '-'),
+      version: '1.0.0',
+      private: true,
+      type: 'module',
+      scripts: {
+        dev: 'vite',
+        build: 'vite build',
+        preview: 'vite preview',
+      },
+      dependencies: {
+        react: '^18.3.1',
+        'react-dom': '^18.3.1',
+      },
+      devDependencies: {
+        '@types/react': '^18.3.3',
+        '@types/react-dom': '^18.3.0',
+        '@vitejs/plugin-react': '^4.3.1',
+        typescript: '^5.4.5',
+        vite: '^5.3.1',
+      },
     },
-    dependencies: {},
-  }, null, 2);
+    null,
+    2
+  );
 
+  // 2. vite.config.ts
+  const viteConfig = `import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+
+export default defineConfig({
+  plugins: [react()],
+  build: {
+    outDir: 'dist',
+    sourcemap: false,
+    minify: true,
+  },
+});
+`;
+
+  // 3. tsconfig.json
+  const tsConfig = JSON.stringify(
+    {
+      compilerOptions: {
+        target: 'ES2020',
+        useDefineForClassFields: true,
+        lib: ['ES2020', 'DOM', 'DOM.Iterable'],
+        module: 'ESNext',
+        skipLibCheck: true,
+        moduleResolution: 'bundler',
+        resolveJsonModule: true,
+        isolatedModules: true,
+        noEmit: true,
+        jsx: 'react-jsx',
+        strict: true,
+        noUnusedLocals: false,
+      },
+      include: ['src'],
+    },
+    null,
+    2
+  );
+
+  // 4. src/styles/theme.css
+  const themeCss = `:root {
+  --bg-primary: #090d16;
+  --bg-card: rgba(22, 30, 49, 0.75);
+  --border-card: rgba(255, 255, 255, 0.08);
+  --primary: #38bdf8;
+  --primary-glow: rgba(56, 189, 248, 0.25);
+  --accent: #818cf8;
+  --text-main: #f8fafc;
+  --text-muted: #94a3b8;
+  --success: #34d399;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  background-color: var(--bg-primary);
+  color: var(--text-main);
+  min-height: 100vh;
+  overflow-x: hidden;
+  line-height: 1.6;
+}
+
+.glow-ambient {
+  position: absolute;
+  width: 600px;
+  height: 600px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--primary-glow) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+  top: -150px;
+  left: -150px;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+  position: relative;
+  z-index: 10;
+}
+
+/* Header & Navigation */
+.navbar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  backdrop-filter: blur(20px);
+  background: rgba(9, 13, 22, 0.85);
+  border-bottom: 1px solid var(--border-card);
+  padding: 1rem 0;
+}
+.navbar-inner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.brand-logo {
+  font-size: 1.35rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--primary), var(--accent));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+}
+.nav-links {
+  display: flex;
+  gap: 2rem;
+  align-items: center;
+  list-style: none;
+}
+.nav-link {
+  color: var(--text-muted);
+  text-decoration: none;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.2s;
+  background: none;
+  border: none;
+}
+.nav-link.active, .nav-link:hover {
+  color: var(--text-main);
+}
+.cart-trigger {
+  background: rgba(56, 189, 248, 0.1);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  color: var(--primary);
+  padding: 0.5rem 1.25rem;
+  border-radius: 9999px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.cart-trigger:hover {
+  background: rgba(56, 189, 248, 0.2);
+  transform: translateY(-1px);
+}
+
+/* Hero Section */
+.hero-section {
+  text-align: center;
+  padding: 5rem 0 3rem;
+}
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 1rem;
+  background: rgba(56, 189, 248, 0.1);
+  border: 1px solid rgba(56, 189, 248, 0.2);
+  border-radius: 9999px;
+  color: var(--primary);
+  font-size: 0.85rem;
+  font-weight: 700;
+  margin-bottom: 1.5rem;
+}
+.hero-title {
+  font-size: 3.25rem;
+  font-weight: 800;
+  line-height: 1.15;
+  margin-bottom: 1.5rem;
+}
+.hero-title span {
+  background: linear-gradient(135deg, var(--primary), var(--accent));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.hero-desc {
+  max-width: 680px;
+  margin: 0 auto 2.5rem;
+  color: var(--text-muted);
+  font-size: 1.15rem;
+}
+.btn-group {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+}
+.btn-primary {
+  background: var(--primary);
+  color: #090d16;
+  font-weight: 700;
+  padding: 0.85rem 2rem;
+  border-radius: 12px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 10px 25px -5px var(--primary-glow);
+}
+.btn-primary:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.1);
+}
+.btn-secondary {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-main);
+  border: 1px solid var(--border-card);
+  font-weight: 600;
+  padding: 0.85rem 2rem;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Card Grid */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 2rem;
+  margin: 3rem 0;
+}
+.product-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
+  border-radius: 18px;
+  overflow: hidden;
+  transition: all 0.3s;
+  display: flex;
+  flex-direction: column;
+}
+.product-card:hover {
+  transform: translateY(-5px);
+  border-color: rgba(56, 189, 248, 0.3);
+  box-shadow: 0 20px 30px -10px rgba(0, 0, 0, 0.5);
+}
+.card-icon {
+  font-size: 2.5rem;
+  height: 120px;
+  background: rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-bottom: 1px solid var(--border-card);
+}
+.card-content {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+.card-tag {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--primary);
+  margin-bottom: 0.5rem;
+  letter-spacing: 0.05em;
+}
+.card-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+.card-desc {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  margin-bottom: 1.5rem;
+  flex: 1;
+}
+.card-action {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+.card-price {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--text-main);
+}
+.add-btn {
+  background: rgba(56, 189, 248, 0.15);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  color: var(--primary);
+  padding: 0.5rem 1.2rem;
+  border-radius: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.add-btn:hover {
+  background: var(--primary);
+  color: #090d16;
+}
+
+/* Drawer */
+.cart-drawer {
+  position: fixed;
+  top: 0;
+  right: -420px;
+  width: 400px;
+  height: 100vh;
+  background: #0f1628;
+  border-left: 1px solid var(--border-card);
+  z-index: 200;
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  transition: right 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: -10px 0 30px rgba(0, 0, 0, 0.7);
+}
+.cart-drawer.open {
+  right: 0;
+}
+.drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  z-index: 199;
+}
+.drawer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border-card);
+}
+.drawer-items {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.5rem 0;
+}
+.drawer-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+.drawer-footer {
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border-card);
+}
+.total-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 1.25rem;
+  font-weight: 800;
+  margin-bottom: 1.5rem;
+}
+
+/* Footer */
+footer {
+  border-top: 1px solid var(--border-card);
+  padding: 3rem 0;
+  margin-top: 5rem;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+`;
+
+  // 5. src/components/Navbar.tsx
+  const navbarTsx = `import React from 'react';
+
+interface NavbarProps {
+  activeTab: string;
+  setActiveTab: (tab: string) => void;
+  cartCount: number;
+  openCart: () => void;
+}
+
+export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, cartCount, openCart }) => {
+  return (
+    <header className="navbar">
+      <div className="container navbar-inner">
+        <div className="brand-logo" onClick={() => setActiveTab('home')}>
+          <span>✦</span>
+          <span>${title}</span>
+        </div>
+        <nav>
+          <ul className="nav-links">
+            <li>
+              <button
+                className={\`nav-link \${activeTab === 'home' ? 'active' : ''}\`}
+                onClick={() => setActiveTab('home')}
+              >
+                Home
+              </button>
+            </li>
+            <li>
+              <button
+                className={\`nav-link \${activeTab === 'products' ? 'active' : ''}\`}
+                onClick={() => setActiveTab('products')}
+              >
+                Collection
+              </button>
+            </li>
+            <li>
+              <button
+                className={\`nav-link \${activeTab === 'analytics' ? 'active' : ''}\`}
+                onClick={() => setActiveTab('analytics')}
+              >
+                Metrics
+              </button>
+            </li>
+            <li>
+              <button
+                className={\`nav-link \${activeTab === 'contact' ? 'active' : ''}\`}
+                onClick={() => setActiveTab('contact')}
+              >
+                Contact
+              </button>
+            </li>
+            <li>
+              <button className="cart-trigger" onClick={openCart}>
+                🛒 Cart ({cartCount})
+              </button>
+            </li>
+          </ul>
+        </nav>
+      </div>
+    </header>
+  );
+};
+`;
+
+  // 6. src/components/ProductCard.tsx
+  const productCardTsx = `import React from 'react';
+
+export interface Product {
+  id: string;
+  title: string;
+  tag: string;
+  desc: string;
+  price: number;
+  icon: string;
+}
+
+interface ProductCardProps {
+  product: Product;
+  onAddToCart: (p: Product) => void;
+}
+
+export const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }) => {
+  return (
+    <div className="product-card">
+      <div className="card-icon">{product.icon}</div>
+      <div className="card-content">
+        <div className="card-tag">{product.tag}</div>
+        <h3 className="card-title">{product.title}</h3>
+        <p className="card-desc">{product.desc}</p>
+        <div className="card-action">
+          <span className="card-price">\${product.price}</span>
+          <button className="add-btn" onClick={() => onAddToCart(product)}>
+            Add to Order
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+`;
+
+  // 7. src/components/CartDrawer.tsx
+  const cartDrawerTsx = `import React from 'react';
+import { Product } from './ProductCard';
+
+interface CartItem {
+  product: Product;
+  qty: number;
+}
+
+interface CartDrawerProps {
+  isOpen: boolean;
+  onClose: () => void;
+  items: CartItem[];
+  onRemove: (id: string) => void;
+  onCheckout: () => void;
+}
+
+export const CartDrawer: React.FC<CartDrawerProps> = ({
+  isOpen,
+  onClose,
+  items,
+  onRemove,
+  onCheckout,
+}) => {
+  const total = items.reduce((sum, item) => sum + item.product.price * item.qty, 0);
+
+  return (
+    <>
+      {isOpen && <div className="drawer-backdrop" onClick={onClose} />}
+      <div className={\`cart-drawer \${isOpen ? 'open' : ''}\`}>
+        <div className="drawer-header">
+          <h3>Active Order Items</h3>
+          <button
+            onClick={onClose}
+            style={{ background: 'none', border: 'none', color: '#94a3b8', fontSize: '1.25rem', cursor: 'pointer' }}
+          >
+            ✕
+          </button>
+        </div>
+        <div className="drawer-items">
+          {items.length === 0 ? (
+            <p style={{ color: '#94a3b8', textAlign: 'center', marginTop: '3rem' }}>
+              Your cart is currently empty.
+            </p>
+          ) : (
+            items.map((item) => (
+              <div key={item.product.id} className="drawer-item">
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>{item.product.title}</div>
+                  <div style={{ color: '#94a3b8', fontSize: '0.85rem' }}>
+                    \${item.product.price} × {item.qty}
+                  </div>
+                </div>
+                <button
+                  onClick={() => onRemove(item.product.id)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: '#f87171',
+                    fontSize: '0.85rem',
+                    cursor: 'pointer',
+                    fontWeight: 600,
+                  }}
+                >
+                  Remove
+                </button>
+              </div>
+            ))
+          )}
+        </div>
+        <div className="drawer-footer">
+          <div className="total-row">
+            <span>Subtotal</span>
+            <span style={{ color: '#38bdf8' }}>\${total}</span>
+          </div>
+          <button
+            className="btn-primary"
+            style={{ width: '100%' }}
+            onClick={onCheckout}
+            disabled={items.length === 0}
+          >
+            Complete Order
+          </button>
+        </div>
+      </div>
+    </>
+  );
+};
+`;
+
+  // 8. src/components/Footer.tsx
+  const footerTsx = `import React from 'react';
+
+export const Footer: React.FC = () => {
+  return (
+    <footer>
+      <div className="container">
+        <p>© 2026 ${title}. Built autonomously via Universal AI App & Website Builder.</p>
+        <p style={{ marginTop: '0.5rem', fontSize: '0.8rem', color: '#64748b' }}>
+          Production React 18 Engine • Cloud Compilation Verified
+        </p>
+      </div>
+    </footer>
+  );
+};
+`;
+
+  // 9. src/App.tsx
+  const appTsx = `import React, { useState } from 'react';
+import { Navbar } from './components/Navbar';
+import { ProductCard, Product } from './components/ProductCard';
+import { CartDrawer } from './components/CartDrawer';
+import { Footer } from './components/Footer';
+
+const SAMPLE_PRODUCTS: Product[] = [
+  {
+    id: 'prod_1',
+    title: 'Quantum Core Accelerator X1',
+    tag: 'Flagship Hardware',
+    desc: 'High-throughput parallel inference coprocessor engineered for high performance workloads.',
+    price: 499,
+    icon: '⚡',
+  },
+  {
+    id: 'prod_2',
+    title: 'Neural Mesh Router Pro',
+    tag: 'Cloud Infrastructure',
+    desc: 'Low-latency distributed mesh router with adaptive load routing and zero-jitter streaming.',
+    price: 349,
+    icon: '🌐',
+  },
+  {
+    id: 'prod_3',
+    title: 'Sentinel Cryptographic Key',
+    tag: 'Security & Access',
+    desc: 'FIPS-140 Level 3 hardware security token with hardware isolation and biometric signing.',
+    price: 189,
+    icon: '🛡️',
+  },
+  {
+    id: 'prod_4',
+    title: 'Apex Matrix Sensor Suite',
+    tag: 'Telemetry',
+    desc: 'Multi-spectral environment monitoring device with real-time anomaly detection.',
+    price: 279,
+    icon: '📊',
+  },
+  {
+    id: 'prod_5',
+    title: 'Velocity Fiber Bridge 100G',
+    tag: 'Networking',
+    desc: 'Ultra-wide bandwidth optical bridge for datacenter inter-cluster synchronization.',
+    price: 799,
+    icon: '🚀',
+  },
+  {
+    id: 'prod_6',
+    title: 'Titanium Edge Enclosure',
+    tag: 'Chassis',
+    desc: 'Precision CNC milled aerospace-grade chassis with passive thermal dissipation.',
+    price: 229,
+    icon: '💎',
+  },
+];
+
+export const App: React.FC = () => {
+  const [activeTab, setActiveTab] = useState<string>('home');
+  const [cart, setCart] = useState<{ product: Product; qty: number }[]>([]);
+  const [isCartOpen, setIsCartOpen] = useState<boolean>(false);
+
+  const handleAddToCart = (product: Product) => {
+    setCart((prev) => {
+      const existing = prev.find((i) => i.product.id === product.id);
+      if (existing) {
+        return prev.map((i) =>
+          i.product.id === product.id ? { ...i, qty: i.qty + 1 } : i
+        );
+      }
+      return [...prev, { product, qty: 1 }];
+    });
+    setIsCartOpen(true);
+  };
+
+  const handleRemoveFromCart = (id: string) => {
+    setCart((prev) => prev.filter((i) => i.product.id !== id));
+  };
+
+  const handleCheckout = () => {
+    alert('Thank you for testing the Universal AI Builder production web app! Order received.');
+    setCart([]);
+    setIsCartOpen(false);
+  };
+
+  const totalCartCount = cart.reduce((sum, item) => sum + item.qty, 0);
+
+  return (
+    <div style={{ position: 'relative', minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+      <div className="glow-ambient" />
+
+      <Navbar
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        cartCount={totalCartCount}
+        openCart={() => setIsCartOpen(true)}
+      />
+
+      <main style={{ flex: 1 }}>
+        <div className="container">
+          {activeTab === 'home' && (
+            <>
+              <section className="hero-section">
+                <div className="hero-badge">🚀 Universal AI App Builder v3.1</div>
+                <h1 className="hero-title">
+                  Engineered for <span>High Performance</span> Digital Commerce
+                </h1>
+                <p className="hero-desc">${prompt.replace(/"/g, '&quot;')}</p>
+                <div className="btn-group">
+                  <button className="btn-primary" onClick={() => setActiveTab('products')}>
+                    Explore Collection
+                  </button>
+                  <button className="btn-secondary" onClick={() => setActiveTab('analytics')}>
+                    View Live Analytics
+                  </button>
+                </div>
+              </section>
+
+              <h2 style={{ fontSize: '1.75rem', fontWeight: 800, marginTop: '2rem' }}>
+                Featured Architecture
+              </h2>
+              <div className="card-grid">
+                {SAMPLE_PRODUCTS.slice(0, 3).map((p) => (
+                  <ProductCard key={p.id} product={p} onAddToCart={handleAddToCart} />
+                ))}
+              </div>
+            </>
+          )}
+
+          {activeTab === 'products' && (
+            <div style={{ padding: '3rem 0' }}>
+              <h2 style={{ fontSize: '2rem', fontWeight: 800, marginBottom: '0.5rem' }}>
+                Complete Product Catalog
+              </h2>
+              <p style={{ color: '#94a3b8', marginBottom: '2rem' }}>
+                Select hardware units and software subscriptions to add to your order.
+              </p>
+              <div className="card-grid">
+                {SAMPLE_PRODUCTS.map((p) => (
+                  <ProductCard key={p.id} product={p} onAddToCart={handleAddToCart} />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'analytics' && (
+            <div style={{ padding: '3rem 0' }}>
+              <h2 style={{ fontSize: '2rem', fontWeight: 800, marginBottom: '1.5rem' }}>
+                Platform Telemetry & Metrics
+              </h2>
+              <div className="card-grid">
+                <div className="product-card" style={{ padding: '2rem' }}>
+                  <div className="card-tag">Real-Time Traffic</div>
+                  <div style={{ fontSize: '2.5rem', fontWeight: 800, color: '#38bdf8' }}>99.98%</div>
+                  <p style={{ color: '#94a3b8', marginTop: '0.5rem' }}>Edge Uptime & Reliability</p>
+                </div>
+                <div className="product-card" style={{ padding: '2rem' }}>
+                  <div className="card-tag">Latency</div>
+                  <div style={{ fontSize: '2.5rem', fontWeight: 800, color: '#34d399' }}>12ms</div>
+                  <p style={{ color: '#94a3b8', marginTop: '0.5rem' }}>Average Global Response Time</p>
+                </div>
+                <div className="product-card" style={{ padding: '2rem' }}>
+                  <div className="card-tag">Transactions</div>
+                  <div style={{ fontSize: '2.5rem', fontWeight: 800, color: '#818cf8' }}>24,891</div>
+                  <p style={{ color: '#94a3b8', marginTop: '0.5rem' }}>Processed Today</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'contact' && (
+            <div style={{ padding: '3rem 0', maxWidth: '600px', margin: '0 auto' }}>
+              <h2 style={{ fontSize: '2rem', fontWeight: 800, marginBottom: '1rem', textAlign: 'center' }}>
+                Connect With Engineers
+              </h2>
+              <p style={{ color: '#94a3b8', textAlign: 'center', marginBottom: '2rem' }}>
+                Have questions about deployment or custom builds? Reach out directly.
+              </p>
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  alert('Inquiry sent successfully!');
+                }}
+                style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}
+              >
+                <input
+                  type="text"
+                  placeholder="Your Name"
+                  required
+                  style={{
+                    padding: '0.85rem 1rem',
+                    background: '#161e31',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    borderRadius: '10px',
+                    color: '#fff',
+                  }}
+                />
+                <input
+                  type="email"
+                  placeholder="Your Email"
+                  required
+                  style={{
+                    padding: '0.85rem 1rem',
+                    background: '#161e31',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    borderRadius: '10px',
+                    color: '#fff',
+                  }}
+                />
+                <textarea
+                  placeholder="How can we assist your build?"
+                  rows={4}
+                  required
+                  style={{
+                    padding: '0.85rem 1rem',
+                    background: '#161e31',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    borderRadius: '10px',
+                    color: '#fff',
+                  }}
+                />
+                <button type="submit" className="btn-primary" style={{ marginTop: '0.5rem' }}>
+                  Submit Inquiry
+                </button>
+              </form>
+            </div>
+          )}
+        </div>
+      </main>
+
+      <CartDrawer
+        isOpen={isCartOpen}
+        onClose={() => setIsCartOpen(false)}
+        items={cart}
+        onRemove={handleRemoveFromCart}
+        onCheckout={handleCheckout}
+      />
+
+      <Footer />
+    </div>
+  );
+};
+`;
+
+  // 10. src/main.tsx
+  const mainTsx = `import React from 'react';
+import ReactDOM from 'react-dom/client';
+import { App } from './App';
+import './styles/theme.css';
+
+ReactDOM.createRoot(document.getElementById('root')!).render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
+);
+`;
+
+  // 11. README.md
   const readmeMd = `# ${title}
 
-Generated automatically by **Universal AI App & Website Builder**.
+Generated autonomously by **Universal AI App & Website Builder**.
 
 ## Prompt
 > "${prompt}"
 
-## Structure
-- \`index.html\`: Standalone modern reactive application with CSS design system and JavaScript state management.
-- \`package.json\`: Production build config packaging assets into \`dist/\`.
+## Architecture
+- **Framework:** React 18 + Vite + TypeScript
+- **Components:** Modular architecture (\`Navbar\`, \`ProductCard\`, \`CartDrawer\`, \`Footer\`)
+- **Pages / Views:** Home showcase, Products catalog, Telemetry & Metrics, Contact inquiries
+- **Design System:** Custom CSS glassmorphism theme (\`src/styles/theme.css\`)
+- **State Management:** Reactive shopping cart state with live total calculator
 
-## Preview & Deployment
-- Live interactive preview accessible via the Dashboard Preview viewer.
-- Compiles into a production deployment ZIP archive.
+## Build & Preview
+\`\`\`bash
+# Install dependencies
+npm install
+
+# Run development server
+npm run dev
+
+# Run production build (outputs to dist/)
+npm run build
+\`\`\`
 `;
 
   return {
@@ -453,6 +1310,15 @@ Generated automatically by **Universal AI App & Website Builder**.
     files: {
       'index.html': indexHtml,
       'package.json': packageJson,
+      'vite.config.ts': viteConfig,
+      'tsconfig.json': tsConfig,
+      'src/main.tsx': mainTsx,
+      'src/App.tsx': appTsx,
+      'src/components/Navbar.tsx': navbarTsx,
+      'src/components/ProductCard.tsx': productCardTsx,
+      'src/components/CartDrawer.tsx': cartDrawerTsx,
+      'src/components/Footer.tsx': footerTsx,
+      'src/styles/theme.css': themeCss,
       'README.md': readmeMd,
     },
   };
