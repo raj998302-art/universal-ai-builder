@@ -607,11 +607,7 @@ async function executeTool(name: string, args: any, user: any) {
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
-      await saveProject(project);
-
-      for (const [path, content] of Object.entries(genProject.files)) {
-        await saveFile(projectId, path, content);
-      }
+      await saveProject(project, genProject.files);
 
       return {
         project_id: projectId,
@@ -638,11 +634,7 @@ async function executeTool(name: string, args: any, user: any) {
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
-      await saveProject(project);
-
-      for (const [path, content] of Object.entries(genWeb.files)) {
-        await saveFile(projectId, path, content);
-      }
+      await saveProject(project, genWeb.files);
 
       return {
         project_id: projectId,
@@ -1120,11 +1112,7 @@ async function executeTool(name: string, args: any, user: any) {
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
-      await saveProject(projectRecord);
-
-      for (const [p, content] of Object.entries(androidProj.files)) {
-        await saveFile(projectId, p, content);
-      }
+      await saveProject(projectRecord, androidProj.files);
 
       return {
         project_id: projectId,

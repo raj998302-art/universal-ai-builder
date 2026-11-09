@@ -117,12 +117,36 @@ export async function getProject(id: string): Promise<Project | null> {
     }
   }
 
-  // 3. Fallback: check persistent GitHub storage
+  // 3. Fallback: check persistent GitHub storage & hydrate files
   const gitContent = await gitGetFile(`data/projects/${id}.json`);
   if (gitContent) {
     try {
-      const p = JSON.parse(gitContent) as Project;
+      const data = JSON.parse(gitContent);
+      const p: Project = {
+        id: data.id,
+        user_id: data.user_id,
+        name: data.name,
+        type: data.type,
+        description: data.description,
+        config: data.config || {},
+        created_at: data.created_at,
+        updated_at: data.updated_at,
+      };
       memoryStore.projects.set(id, p);
+
+      if (data.files && typeof data.files === 'object') {
+        if (!memoryStore.files.has(id)) {
+          memoryStore.files.set(id, new Map());
+        }
+        for (const [filePath, content] of Object.entries(data.files)) {
+          memoryStore.files.get(id)!.set(filePath, {
+            project_id: id,
+            file_path: filePath,
+            content: content as string,
+            updated_at: p.updated_at,
+          });
+        }
+      }
       return p;
     } catch {}
   }
@@ -165,9 +189,23 @@ export async function listProjects(userId?: string): Promise<Project[]> {
   return Array.from(projectsMap.values());
 }
 
-export async function saveProject(project: Project): Promise<void> {
+export async function saveProject(project: Project, filesMap?: Record<string, string>): Promise<void> {
   // 1. Save to memory cache
   memoryStore.projects.set(project.id, project);
+
+  if (filesMap) {
+    if (!memoryStore.files.has(project.id)) {
+      memoryStore.files.set(project.id, new Map());
+    }
+    for (const [p, c] of Object.entries(filesMap)) {
+      memoryStore.files.get(project.id)!.set(p, {
+        project_id: project.id,
+        file_path: p,
+        content: c,
+        updated_at: new Date().toISOString(),
+      });
+    }
+  }
 
   // 2. Save to database if connected
   const dbAvailable = await isDatabaseAvailable();
@@ -197,14 +235,29 @@ export async function saveProject(project: Project): Promise<void> {
     }
   }
 
-  // 3. Persist to GitHub storage (non-blocking)
-  gitSaveFile(
-    `data/projects/${project.id}.json`,
-    JSON.stringify(project, null, 2),
-    `chore: sync project ${project.id} metadata`
-  ).catch(err => {
+  // 3. Persist to GitHub storage (bundle project + all files in single atomic commit)
+  const filesObj: Record<string, string> = {};
+  const memFiles = memoryStore.files.get(project.id);
+  if (memFiles) {
+    memFiles.forEach((f, path) => {
+      filesObj[path] = f.content;
+    });
+  }
+
+  const payload = {
+    ...project,
+    files: filesObj,
+  };
+
+  try {
+    await gitSaveFile(
+      `data/projects/${project.id}.json`,
+      JSON.stringify(payload, null, 2),
+      `chore: sync project ${project.id} bundle [skip ci]`
+    );
+  } catch (err) {
     console.error('GitHub storage sync error:', err);
-  });
+  }
 }
 
 export async function deleteProject(id: string): Promise<boolean> {
@@ -225,10 +278,15 @@ export async function deleteProject(id: string): Promise<boolean> {
 // ── FILE OPERATIONS ─────────────────────────────────────────────────
 export async function getFile(projectId: string, filePath: string): Promise<ProjectFile | null> {
   // 1. Check memory cache
-  const cached = memoryStore.files.get(projectId)?.get(filePath);
+  let cached = memoryStore.files.get(projectId)?.get(filePath);
   if (cached) return cached;
 
-  // 2. Check Database
+  // 2. Hydrate from persistent project bundle if available
+  await getProject(projectId);
+  cached = memoryStore.files.get(projectId)?.get(filePath);
+  if (cached) return cached;
+
+  // 3. Check Database
   const dbAvailable = await isDatabaseAvailable();
   if (dbAvailable) {
     try {
@@ -263,6 +321,9 @@ export async function getFile(projectId: string, filePath: string): Promise<Proj
 }
 
 export async function listProjectFiles(projectId: string): Promise<ProjectFile[]> {
+  // Ensure project and files are hydrated from persistent storage
+  await getProject(projectId);
+
   const filesMap = new Map<string, ProjectFile>();
 
   // 1. From memory
