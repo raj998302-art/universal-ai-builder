@@ -1,0 +1,55 @@
+# Docker Compose for local development
+version: '3.8'
+
+services:
+  dashboard:
+    build:
+      context: ./apps/dashboard
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - API_SECRET=${API_SECRET}
+      - BUILD_WORKER_URL=http://build-orchestrator:3002
+      - STORAGE_ENDPOINT=${STORAGE_ENDPOINT}
+      - STORAGE_ACCESS_KEY=${STORAGE_ACCESS_KEY}
+      - STORAGE_SECRET_KEY=${STORAGE_SECRET_KEY}
+      - STORAGE_BUCKET=${STORAGE_BUCKET}
+    depends_on:
+      - build-orchestrator
+
+  mcp-server:
+    build:
+      context: ./services/mcp-server
+    ports:
+      - "3001:3001"
+    environment:
+      - API_URL=http://dashboard:3000
+      - API_SECRET=${API_SECRET}
+      - PORT=3001
+
+  build-orchestrator:
+    build:
+      context: ./services/build-orchestrator
+    ports:
+      - "3002:3002"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - build-workspaces:/workspaces
+    environment:
+      - API_SECRET=${API_SECRET}
+      - STORAGE_ENDPOINT=${STORAGE_ENDPOINT}
+      - STORAGE_ACCESS_KEY=${STORAGE_ACCESS_KEY}
+      - STORAGE_SECRET_KEY=${STORAGE_SECRET_KEY}
+      - STORAGE_BUCKET=${STORAGE_BUCKET}
+      - DOCKER_HOST=unix:///var/run/docker.sock
+      - WORKSPACE_DIR=/workspaces
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 8G
+
+volumes:
+  build-workspaces:

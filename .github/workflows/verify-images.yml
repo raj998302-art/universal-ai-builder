@@ -1,0 +1,269 @@
+# =============================================================================
+# Verify Docker Images
+# =============================================================================
+# Pulls each image from GHCR after the build workflow completes and runs
+# verification commands to ensure all tools are installed correctly.
+# =============================================================================
+
+name: Verify Docker Images
+
+on:
+  workflow_run:
+    workflows: ["Build and Push Docker Images"]
+    types:
+      - completed
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ghcr.io/raj998302-art/universal-ai-builder
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Gate: only run if the triggering workflow succeeded
+  # ---------------------------------------------------------------------------
+  check-trigger:
+    name: Check trigger status
+    runs-on: ubuntu-latest
+    outputs:
+      should-run: ${{ steps.check.outputs.result }}
+    steps:
+      - name: Check workflow_run conclusion
+        id: check
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "result=true" >> "$GITHUB_OUTPUT"
+          elif [[ "${{ github.event.workflow_run.conclusion }}" == "success" ]]; then
+            echo "result=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "result=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Skipping verification — upstream workflow did not succeed (conclusion: ${{ github.event.workflow_run.conclusion }})"
+          fi
+
+  # ---------------------------------------------------------------------------
+  # Verify flutter-android image
+  # ---------------------------------------------------------------------------
+  verify-flutter-android:
+    name: Verify flutter-android
+    runs-on: ubuntu-latest
+    needs: check-trigger
+    if: needs.check-trigger.outputs.should-run == 'true'
+    steps:
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pull flutter-android image
+        run: docker pull ${{ env.IMAGE_PREFIX }}/flutter-android:latest
+
+      - name: Verify Flutter SDK
+        run: |
+          echo "=== Flutter Version ==="
+          docker run --rm ${{ env.IMAGE_PREFIX }}/flutter-android:latest flutter --version
+          echo ""
+          echo "=== Dart Version ==="
+          docker run --rm ${{ env.IMAGE_PREFIX }}/flutter-android:latest dart --version
+
+      - name: Verify Android SDK
+        run: |
+          echo "=== Java Version ==="
+          docker run --rm ${{ env.IMAGE_PREFIX }}/flutter-android:latest java -version
+          echo ""
+          echo "=== SDK Manager List (installed) ==="
+          docker run --rm ${{ env.IMAGE_PREFIX }}/flutter-android:latest sdkmanager --list_installed 2>/dev/null || \
+            docker run --rm ${{ env.IMAGE_PREFIX }}/flutter-android:latest sdkmanager --list 2>/dev/null | head -40
+
+      - name: Verify Gradle
+        run: |
+          echo "=== Gradle Version ==="
+          docker run --rm ${{ env.IMAGE_PREFIX }}/flutter-android:latest gradle --version
+
+      - name: Verify Flutter Doctor
+        run: |
+          echo "=== Flutter Doctor ==="
+          docker run --rm ${{ env.IMAGE_PREFIX }}/flutter-android:latest flutter doctor -v
+
+      - name: Verify non-root user
+        run: |
+          echo "=== Current User ==="
+          CURRENT_USER=$(docker run --rm ${{ env.IMAGE_PREFIX }}/flutter-android:latest whoami)
+          echo "Running as: ${CURRENT_USER}"
+          if [ "${CURRENT_USER}" != "builder" ]; then
+            echo "::error::Expected user 'builder' but got '${CURRENT_USER}'"
+            exit 1
+          fi
+
+      - name: Verify workspace directory
+        run: |
+          echo "=== Working Directory ==="
+          WORKDIR=$(docker run --rm ${{ env.IMAGE_PREFIX }}/flutter-android:latest pwd)
+          echo "WORKDIR: ${WORKDIR}"
+          if [ "${WORKDIR}" != "/workspace" ]; then
+            echo "::error::Expected WORKDIR '/workspace' but got '${WORKDIR}'"
+            exit 1
+          fi
+
+  # ---------------------------------------------------------------------------
+  # Verify native-android image
+  # ---------------------------------------------------------------------------
+  verify-native-android:
+    name: Verify native-android
+    runs-on: ubuntu-latest
+    needs: check-trigger
+    if: needs.check-trigger.outputs.should-run == 'true'
+    steps:
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pull native-android image
+        run: docker pull ${{ env.IMAGE_PREFIX }}/native-android:latest
+
+      - name: Verify Java
+        run: |
+          echo "=== Java Version ==="
+          docker run --rm ${{ env.IMAGE_PREFIX }}/native-android:latest java -version
+
+      - name: Verify Android SDK
+        run: |
+          echo "=== SDK Manager List (installed) ==="
+          docker run --rm ${{ env.IMAGE_PREFIX }}/native-android:latest sdkmanager --list_installed 2>/dev/null || \
+            docker run --rm ${{ env.IMAGE_PREFIX }}/native-android:latest sdkmanager --list 2>/dev/null | head -40
+
+      - name: Verify Gradle
+        run: |
+          echo "=== Gradle Version ==="
+          docker run --rm ${{ env.IMAGE_PREFIX }}/native-android:latest gradle --version
+
+      - name: Verify Kotlin
+        run: |
+          echo "=== Kotlin Version ==="
+          docker run --rm ${{ env.IMAGE_PREFIX }}/native-android:latest kotlinc -version
+
+      - name: Verify non-root user
+        run: |
+          CURRENT_USER=$(docker run --rm ${{ env.IMAGE_PREFIX }}/native-android:latest whoami)
+          echo "Running as: ${CURRENT_USER}"
+          if [ "${CURRENT_USER}" != "builder" ]; then
+            echo "::error::Expected user 'builder' but got '${CURRENT_USER}'"
+            exit 1
+          fi
+
+      - name: Verify workspace directory
+        run: |
+          WORKDIR=$(docker run --rm ${{ env.IMAGE_PREFIX }}/native-android:latest pwd)
+          echo "WORKDIR: ${WORKDIR}"
+          if [ "${WORKDIR}" != "/workspace" ]; then
+            echo "::error::Expected WORKDIR '/workspace' but got '${WORKDIR}'"
+            exit 1
+          fi
+
+  # ---------------------------------------------------------------------------
+  # Verify web-builder image
+  # ---------------------------------------------------------------------------
+  verify-web-builder:
+    name: Verify web-builder
+    runs-on: ubuntu-latest
+    needs: check-trigger
+    if: needs.check-trigger.outputs.should-run == 'true'
+    steps:
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pull web-builder image
+        run: docker pull ${{ env.IMAGE_PREFIX }}/web-builder:latest
+
+      - name: Verify Node.js
+        run: |
+          echo "=== Node.js Version ==="
+          docker run --rm ${{ env.IMAGE_PREFIX }}/web-builder:latest node --version
+
+      - name: Verify npm
+        run: |
+          echo "=== npm Version ==="
+          docker run --rm ${{ env.IMAGE_PREFIX }}/web-builder:latest npm --version
+
+      - name: Verify pnpm
+        run: |
+          echo "=== pnpm Version ==="
+          docker run --rm ${{ env.IMAGE_PREFIX }}/web-builder:latest pnpm --version
+
+      - name: Verify Bun
+        run: |
+          echo "=== Bun Version ==="
+          docker run --rm ${{ env.IMAGE_PREFIX }}/web-builder:latest bun --version
+
+      - name: Verify Python 3
+        run: |
+          echo "=== Python 3 Version ==="
+          docker run --rm ${{ env.IMAGE_PREFIX }}/web-builder:latest python3 --version
+
+      - name: Verify Git
+        run: |
+          echo "=== Git Version ==="
+          docker run --rm ${{ env.IMAGE_PREFIX }}/web-builder:latest git --version
+
+      - name: Verify non-root user
+        run: |
+          CURRENT_USER=$(docker run --rm ${{ env.IMAGE_PREFIX }}/web-builder:latest whoami)
+          echo "Running as: ${CURRENT_USER}"
+          if [ "${CURRENT_USER}" != "builder" ]; then
+            echo "::error::Expected user 'builder' but got '${CURRENT_USER}'"
+            exit 1
+          fi
+
+      - name: Verify workspace directory
+        run: |
+          WORKDIR=$(docker run --rm ${{ env.IMAGE_PREFIX }}/web-builder:latest pwd)
+          echo "WORKDIR: ${WORKDIR}"
+          if [ "${WORKDIR}" != "/workspace" ]; then
+            echo "::error::Expected WORKDIR '/workspace' but got '${WORKDIR}'"
+            exit 1
+          fi
+
+  # ---------------------------------------------------------------------------
+  # Summary
+  # ---------------------------------------------------------------------------
+  verification-summary:
+    name: Verification Summary
+    runs-on: ubuntu-latest
+    needs:
+      - verify-flutter-android
+      - verify-native-android
+      - verify-web-builder
+    if: always()
+    steps:
+      - name: Report results
+        run: |
+          echo "## Docker Image Verification Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Image | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| flutter-android | ${{ needs.verify-flutter-android.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| native-android | ${{ needs.verify-native-android.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| web-builder | ${{ needs.verify-web-builder.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+
+      - name: Check all passed
+        if: >-
+          needs.verify-flutter-android.result != 'success' ||
+          needs.verify-native-android.result != 'success' ||
+          needs.verify-web-builder.result != 'success'
+        run: |
+          echo "::error::One or more image verifications failed"
+          exit 1
