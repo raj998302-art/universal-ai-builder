@@ -1,0 +1,6 @@
+{
+  "project_id": "proj_seBHKHpmnIsd",
+  "file_path": "README.md",
+  "content": "# ApexStore — Modern Commerce\n\nGenerated automatically by **Universal AI App & Website Builder**.\n\n## Prompt\n> \"Modern SaaS e-commerce store with interactive product cart, pricing cards, hero section, and dark theme\"\n\n## Structure\n- `index.html`: Standalone modern reactive application with CSS design system and JavaScript state management.\n- `package.json`: Production build config packaging assets into `dist/`.\n\n## Preview & Deployment\n- Live interactive preview accessible via the Dashboard Preview viewer.\n- Compiles into a production deployment ZIP archive.\n",
+  "updated_at": "2026-11-09T08:41:47.553Z"
+}
