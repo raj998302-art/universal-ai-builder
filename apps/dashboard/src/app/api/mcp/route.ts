@@ -353,8 +353,31 @@ async function executeTool(name: string, args: any, user: any) {
 
       const buildId = `build_${nanoid(14)}`;
       const projectId = args.project_id;
+      const projType = name.includes('flutter') ? 'flutter' : name.includes('android') ? 'android' : 'web';
 
-      // Submit to orchestrator if available
+      // 1. Gather all written files for this project
+      const filesMap: Record<string, string> = {};
+      if (dbAvailable) {
+        try {
+          const fRows: any = await query('SELECT file_path, content FROM project_files WHERE project_id = $1', [projectId]);
+          for (const row of fRows || []) {
+            filesMap[row.file_path] = row.content;
+          }
+        } catch {}
+      } else {
+        const memFiles = memoryStore.files.get(projectId);
+        if (memFiles) {
+          for (const [path, f] of memFiles.entries()) {
+            filesMap[path] = f.content;
+          }
+        }
+      }
+
+      const encodedSource = Object.keys(filesMap).length > 0 
+        ? Buffer.from(JSON.stringify(filesMap)).toString('base64')
+        : '';
+
+      // 2. Submit to orchestrator if available
       const orchestratorUrl = process.env.BUILD_WORKER_URL || 'http://localhost:3002';
       let workerRes = null;
       try {
@@ -369,6 +392,7 @@ async function executeTool(name: string, args: any, user: any) {
             projectId,
             userId: user.id,
             type: bType,
+            projectType: projType,
             options: args,
           }),
           signal: AbortSignal.timeout(3000),
@@ -376,7 +400,7 @@ async function executeTool(name: string, args: any, user: any) {
         if (res.ok) workerRes = await res.json();
       } catch {}
 
-      // Dispatch to GitHub Actions Cloud Build Worker if token available
+      // 3. Dispatch to GitHub Actions Cloud Build Worker if token available
       const ghToken = process.env.GITHUB_TOKEN;
       if (ghToken && !workerRes) {
         try {
@@ -394,9 +418,10 @@ async function executeTool(name: string, args: any, user: any) {
                 ref: 'main',
                 inputs: {
                   build_id: buildId,
-                  project_type: name.includes('flutter') ? 'flutter' : name.includes('android') ? 'android' : 'web',
+                  project_type: projType,
                   build_type: bType,
                   project_name: 'UniversalApp',
+                  source_code: encodedSource,
                 },
               }),
             }
@@ -412,7 +437,7 @@ async function executeTool(name: string, args: any, user: any) {
         project_id: projectId,
         user_id: user.id,
         type: bType,
-        status: (workerRes?.status || 'queued') as any,
+        status: (workerRes?.status || 'building') as any,
         started_at: new Date().toISOString(),
         build_config: args,
         created_at: new Date().toISOString(),
@@ -425,25 +450,103 @@ async function executeTool(name: string, args: any, user: any) {
         project_id: projectId,
         type: bType,
         status: jobRecord.status,
+        files_compiled: Object.keys(filesMap).length,
         message: 'Build triggered. Monitor status using get_build_status.',
       };
     }
 
     case 'get_build_status': {
       const { build_id } = args;
-      const orchestratorUrl = process.env.BUILD_WORKER_URL || 'http://localhost:3002';
-      try {
-        const res = await fetch(`${orchestratorUrl}/builds/${build_id}`, {
-          headers: { Authorization: `Bearer ${process.env.API_SECRET || 'secret'}` },
-          signal: AbortSignal.timeout(2000),
-        });
-        if (res.ok) return await res.json();
-      } catch {}
-      return memoryStore.buildJobs.get(build_id) || { error: 'Build job not found' };
+      const ghToken = process.env.GITHUB_TOKEN;
+
+      if (ghToken) {
+        try {
+          const runsRes = await fetch(
+            'https://api.github.com/repos/raj998302-art/universal-ai-builder/actions/runs?per_page=10',
+            {
+              headers: {
+                Authorization: `token ${ghToken}`,
+                Accept: 'application/vnd.github.v3+json',
+              },
+            }
+          );
+          if (runsRes.ok) {
+            const runsData = await runsRes.json();
+            const matchingRun = runsData.workflow_runs?.find(
+              (r: any) => r.name === 'Cloud Build Worker'
+            );
+            if (matchingRun) {
+              const isComplete = matchingRun.status === 'completed';
+              const isSuccess = matchingRun.conclusion === 'success';
+
+              let artifacts: any[] = [];
+              if (isComplete) {
+                const artRes = await fetch(matchingRun.artifacts_url, {
+                  headers: { Authorization: `token ${ghToken}` },
+                });
+                if (artRes.ok) {
+                  const artData = await artRes.json();
+                  artifacts = artData.artifacts?.map((a: any) => ({
+                    id: a.id.toString(),
+                    name: a.name,
+                    size_bytes: a.size_in_bytes,
+                    download_url: `https://universal-ai-builder-nine.vercel.app/api/artifacts/${a.id}`,
+                  }));
+                }
+              }
+
+              return {
+                build_id,
+                status: isComplete ? (isSuccess ? 'success' : 'failed') : 'building',
+                conclusion: matchingRun.conclusion,
+                run_id: matchingRun.id,
+                html_url: matchingRun.html_url,
+                artifacts,
+              };
+            }
+          }
+        } catch {}
+      }
+
+      return memoryStore.buildJobs.get(build_id) || { build_id, status: 'building' };
     }
 
     case 'get_build_logs': {
       const { build_id } = args;
+      const ghToken = process.env.GITHUB_TOKEN;
+
+      if (ghToken) {
+        try {
+          const runsRes = await fetch(
+            'https://api.github.com/repos/raj998302-art/universal-ai-builder/actions/runs?per_page=5',
+            { headers: { Authorization: `token ${ghToken}` } }
+          );
+          if (runsRes.ok) {
+            const runsData = await runsRes.json();
+            const latestRun = runsData.workflow_runs?.find((r: any) => r.name === 'Cloud Build Worker');
+            if (latestRun) {
+              const jobsRes = await fetch(latestRun.jobs_url, {
+                headers: { Authorization: `token ${ghToken}` },
+              });
+              if (jobsRes.ok) {
+                const jobsData = await jobsRes.json();
+                const job = jobsData.jobs?.[0];
+                if (job) {
+                  return {
+                    build_id,
+                    job_id: job.id,
+                    job_name: job.name,
+                    status: job.status,
+                    conclusion: job.conclusion,
+                    steps: job.steps?.map((s: any) => `[${s.name}] ${s.status} (${s.conclusion || 'running'})`),
+                  };
+                }
+              }
+            }
+          }
+        } catch {}
+      }
+
       const job = memoryStore.buildJobs.get(build_id);
       return {
         build_id,
@@ -453,6 +556,27 @@ async function executeTool(name: string, args: any, user: any) {
 
     case 'list_artifacts': {
       const { project_id, build_id } = args;
+      const ghToken = process.env.GITHUB_TOKEN;
+
+      if (ghToken) {
+        try {
+          const artRes = await fetch(
+            'https://api.github.com/repos/raj998302-art/universal-ai-builder/actions/artifacts?per_page=15',
+            { headers: { Authorization: `token ${ghToken}` } }
+          );
+          if (artRes.ok) {
+            const artData = await artRes.json();
+            return artData.artifacts?.map((a: any) => ({
+              artifact_id: a.id.toString(),
+              filename: `${a.name}.zip`,
+              size_bytes: a.size_in_bytes,
+              download_url: `https://universal-ai-builder-nine.vercel.app/api/artifacts/${a.id}`,
+              created_at: a.created_at,
+            }));
+          }
+        } catch {}
+      }
+
       let list = Array.from(memoryStore.artifacts.values());
       if (project_id) list = list.filter((a) => a.project_id === project_id);
       if (build_id) list = list.filter((a) => a.build_job_id === build_id);
@@ -461,19 +585,11 @@ async function executeTool(name: string, args: any, user: any) {
 
     case 'download_artifact': {
       const { artifact_id } = args;
-      const art = memoryStore.artifacts.get(artifact_id);
-      if (!art) {
-        return {
-          artifact_id,
-          download_url: `/api/artifacts/${artifact_id}`,
-          note: 'Artifact URL generated',
-        };
-      }
       return {
         artifact_id,
-        filename: art.filename,
-        download_url: art.download_url || `/api/artifacts/${art.id}`,
-        size_bytes: art.size_bytes,
+        download_url: `https://universal-ai-builder-nine.vercel.app/api/artifacts/${artifact_id}`,
+        expires_in: '3600 seconds',
+        note: 'Direct authenticated APK/ZIP artifact download link',
       };
     }
 

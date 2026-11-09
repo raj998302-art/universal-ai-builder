@@ -66,6 +66,23 @@ jobs:
           echo "Flutter project generated successfully"
           flutter doctor -v
 
+          # Inject custom source code if provided via MCP write_file
+          if [ -n "${{ github.event.inputs.source_code }}" ]; then
+            python3 -c "
+          import json, base64, os
+          try:
+              data = json.loads(base64.b64decode('${{ github.event.inputs.source_code }}').decode('utf-8'))
+              for path, content in data.items():
+                  p = os.path.join('.', path.lstrip('/'))
+                  os.makedirs(os.path.dirname(p), exist_ok=True)
+                  with open(p, 'w') as f:
+                      f.write(content)
+                  print('Injected MCP source file:', path)
+          except Exception as e:
+              print('Source injection error:', e)
+          "
+          fi
+
       - name: Compile Flutter Release APK
         if: github.event.inputs.build_type == 'apk'
         run: |
@@ -224,6 +241,23 @@ jobs:
               }
           }
           EOF
+
+          # Inject custom source code if provided via MCP write_file
+          if [ -n "${{ github.event.inputs.source_code }}" ]; then
+            python3 -c "
+          import json, base64, os
+          try:
+              data = json.loads(base64.b64decode('${{ github.event.inputs.source_code }}').decode('utf-8'))
+              for path, content in data.items():
+                  p = os.path.join('.', path.lstrip('/'))
+                  os.makedirs(os.path.dirname(p), exist_ok=True)
+                  with open(p, 'w') as f:
+                      f.write(content)
+                  print('Injected MCP source file:', path)
+          except Exception as e:
+              print('Source injection error:', e)
+          "
+          fi
 
       - name: Build Native Android APK
         if: github.event.inputs.build_type == 'apk'
