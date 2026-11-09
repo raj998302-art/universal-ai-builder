@@ -7,17 +7,7 @@ export async function GET(
 ) {
   const projectId = params.id;
 
-  const project = await getProject(projectId);
-  if (!project) {
-    return new NextResponse(
-      `<html><body style="background:#090d16;color:#f8fafc;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;">
-        <div style="text-align:center;"><h2>Project Not Found</h2><p style="color:#94a3b8;">ID: ${projectId}</p></div>
-      </body></html>`,
-      { headers: { 'Content-Type': 'text/html' }, status: 404 }
-    );
-  }
-
-  // 1. Try to find index.html or dist/index.html
+  // 1. Try to find index.html or dist/index.html directly
   let indexFile = await getFile(projectId, 'index.html');
   if (!indexFile) indexFile = await getFile(projectId, 'dist/index.html');
 
@@ -28,6 +18,16 @@ export async function GET(
         'X-Frame-Options': 'ALLOWALL',
       },
     });
+  }
+
+  const project = await getProject(projectId);
+  if (!project) {
+    return new NextResponse(
+      `<html><body style="background:#090d16;color:#f8fafc;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;">
+        <div style="text-align:center;"><h2>Project Not Found</h2><p style="color:#94a3b8;">ID: ${projectId}</p></div>
+      </body></html>`,
+      { headers: { 'Content-Type': 'text/html' }, status: 404 }
+    );
   }
 
   // 2. If no index.html, list all project files in a preview inspector

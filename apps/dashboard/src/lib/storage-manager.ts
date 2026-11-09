@@ -195,12 +195,16 @@ export async function saveProject(project: Project): Promise<void> {
     }
   }
 
-  // 3. Persist to GitHub storage asynchronously
-  gitSaveFile(
-    `data/projects/${project.id}.json`,
-    JSON.stringify(project, null, 2),
-    `chore: sync project ${project.id} metadata`
-  ).catch(() => {});
+  // 3. Persist to GitHub storage
+  try {
+    await gitSaveFile(
+      `data/projects/${project.id}.json`,
+      JSON.stringify(project, null, 2),
+      `chore: sync project ${project.id} metadata`
+    );
+  } catch (err) {
+    console.error('GitHub storage sync error:', err);
+  }
 }
 
 export async function deleteProject(id: string): Promise<boolean> {
@@ -317,11 +321,13 @@ export async function saveFile(projectId: string, filePath: string, content: str
 
   // 3. GitHub storage
   const encodedPath = Buffer.from(filePath).toString('hex');
-  gitSaveFile(
-    `data/files/${projectId}/${encodedPath}.json`,
-    JSON.stringify(file, null, 2),
-    `chore: save file ${filePath} in ${projectId}`
-  ).catch(() => {});
+  try {
+    await gitSaveFile(
+      `data/files/${projectId}/${encodedPath}.json`,
+      JSON.stringify(file, null, 2),
+      `chore: save file ${filePath} in ${projectId}`
+    );
+  } catch {}
 
   return file;
 }
