@@ -228,7 +228,13 @@ jobs:
       - name: Build Native Android APK
         if: github.event.inputs.build_type == 'apk'
         run: |
+          # Install and use Gradle 8.7 compatible with AGP 8.2
+          wget -q https://services.gradle.org/distributions/gradle-8.7-bin.zip -O /tmp/gradle.zip
+          unzip -q /tmp/gradle.zip -d /tmp/gradle-dist
+          export PATH="/tmp/gradle-dist/gradle-8.7/bin:$PATH"
+
           cd workspace/android-app
+          gradle --version
           gradle assembleRelease --stacktrace
           mkdir -p ../../output
           cp app/build/outputs/apk/release/*.apk ../../output/${{ github.event.inputs.build_id }}_native_release.apk || cp app/build/outputs/apk/release/*-unsigned.apk ../../output/${{ github.event.inputs.build_id }}_native_release.apk
@@ -237,6 +243,7 @@ jobs:
       - name: Build Native Android AAB
         if: github.event.inputs.build_type == 'aab'
         run: |
+          export PATH="/tmp/gradle-dist/gradle-8.7/bin:$PATH"
           cd workspace/android-app
           gradle bundleRelease --stacktrace
           mkdir -p ../../output
