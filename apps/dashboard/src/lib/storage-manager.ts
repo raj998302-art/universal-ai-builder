@@ -380,13 +380,18 @@ export async function saveFile(projectId: string, filePath: string, content: str
     } catch {}
   }
 
-  // 3. GitHub storage (non-blocking background sync)
+  // 3. GitHub storage & project bundle sync
   const encodedPath = Buffer.from(filePath).toString('hex');
   gitSaveFile(
     `data/files/${projectId}/${encodedPath}.json`,
     JSON.stringify(file, null, 2),
     `chore: save file ${filePath} in ${projectId}`
   ).catch(() => {});
+
+  const p = memoryStore.projects.get(projectId);
+  if (p) {
+    saveProject(p).catch(() => {});
+  }
 
   return file;
 }

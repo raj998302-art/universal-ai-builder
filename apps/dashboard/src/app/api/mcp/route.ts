@@ -498,12 +498,12 @@ async function executeTool(name: string, args: any, user: any) {
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
-      await saveProject(clonedProject);
-
       const srcFiles = await listProjectFiles(args.project_id);
+      const filesMap: Record<string, string> = {};
       for (const file of srcFiles) {
-        await saveFile(newProjectId, file.file_path, file.content);
+        filesMap[file.file_path] = file.content;
       }
+      await saveProject(clonedProject, filesMap);
 
       return {
         original_project_id: args.project_id,
