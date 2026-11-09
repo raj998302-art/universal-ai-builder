@@ -384,10 +384,11 @@ export async function runAutonomousAgent(
         id: buildId,
         project_id: projectId,
         user_id: userId,
-        type: buildTarget as any,
+        type: (buildTarget === 'zip' ? 'web' : buildTarget) as 'apk' | 'aab' | 'web',
         status: 'building',
         started_at: new Date().toISOString(),
         created_at: new Date().toISOString(),
+        build_config: { prompt, target: buildTarget },
         logs: [`[Agent] Dispatched job ${buildId}`],
       });
 
