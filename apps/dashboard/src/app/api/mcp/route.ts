@@ -311,7 +311,18 @@ async function executeTool(name: string, args: any, user: any) {
         currentContent = rows[0].content;
       } else {
         const file = memoryStore.files.get(project_id)?.get(file_path);
-        if (!file) return { error: 'File not found' };
+        if (!file) {
+          if (!memoryStore.files.has(project_id)) {
+            memoryStore.files.set(project_id, new Map());
+          }
+          memoryStore.files.get(project_id)!.set(file_path, {
+            project_id,
+            file_path,
+            content: replacement,
+            updated_at: new Date().toISOString(),
+          });
+          return { project_id, file_path, status: 'updated' };
+        }
         currentContent = file.content;
       }
       if (!currentContent.includes(target)) {
