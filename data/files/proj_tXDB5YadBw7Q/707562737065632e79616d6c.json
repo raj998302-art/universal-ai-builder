@@ -1,0 +1,6 @@
+{
+  "project_id": "proj_tXDB5YadBw7Q",
+  "file_path": "pubspec.yaml",
+  "content": "name: auditflutterapp\ndescription: Generated Flutter application by Universal AI Builder.\nversion: 1.0.0+1\nenvironment:\n  sdk: \">=3.0.0 <4.0.0\"\n\ndependencies:\n  flutter:\n    sdk: flutter\n  cupertino_icons: ^1.0.6\n\ndev_dependencies:\n  flutter_test:\n    sdk: flutter\n  flutter_lints: ^3.0.0\n\nflutter:\n  uses-material-design: true\n",
+  "updated_at": "2026-11-09T11:09:27.755Z"
+}
