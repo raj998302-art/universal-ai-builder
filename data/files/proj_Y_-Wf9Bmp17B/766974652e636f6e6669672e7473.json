@@ -1,0 +1,6 @@
+{
+  "project_id": "proj_Y_-Wf9Bmp17B",
+  "file_path": "vite.config.ts",
+  "content": "import { defineConfig } from 'vite';\nimport react from '@vitejs/plugin-react';\n\nexport default defineConfig({\n  plugins: [react()],\n  build: {\n    outDir: 'dist',\n    sourcemap: false,\n    minify: true,\n  },\n});\n",
+  "updated_at": "2026-11-09T11:09:31.694Z"
+}
