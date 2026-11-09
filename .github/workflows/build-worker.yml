@@ -347,9 +347,8 @@ jobs:
           "
           fi
 
-          if npm run build --if-present; then
-            echo "Web build script executed successfully"
-          fi
+          # Execute build script (will fail immediately on build errors)
+          npm run build
 
           mkdir -p ../../output
           if [ -d "dist" ]; then
