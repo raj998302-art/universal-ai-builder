@@ -1,6 +1,0 @@
-{
-  "project_id": "proj_rFStyBw7RyuI",
-  "file_path": "src/audit-sample.ts",
-  "content": "export const AUDIT_STATUS = \"PASS\";\nexport const TEST_KEY = 200;",
-  "updated_at": "2026-11-09T11:09:23.873Z"
-}
