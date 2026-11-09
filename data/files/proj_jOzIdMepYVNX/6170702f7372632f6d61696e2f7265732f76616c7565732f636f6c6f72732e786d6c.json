@@ -1,0 +1,6 @@
+{
+  "project_id": "proj_jOzIdMepYVNX",
+  "file_path": "app/src/main/res/values/colors.xml",
+  "content": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<resources>\n    <color name=\"primary\">#38BDF8</color>\n    <color name=\"primary_dark\">#0284C7</color>\n    <color name=\"accent\">#818CF8</color>\n    <color name=\"background\">#FFFFFF</color>\n    <color name=\"text_color\">#000000</color>\n</resources>\n",
+  "updated_at": "2026-11-09T12:09:07.449Z"
+}
