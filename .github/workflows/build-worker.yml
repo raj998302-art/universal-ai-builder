@@ -120,6 +120,13 @@ jobs:
           include ':app'
           EOF
 
+          # gradle.properties
+          cat << 'EOF' > gradle.properties
+          android.useAndroidX=true
+          android.enableJetifier=true
+          org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
+          EOF
+
           # build.gradle (root)
           cat << 'EOF' > build.gradle
           buildscript {
