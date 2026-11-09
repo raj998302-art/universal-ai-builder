@@ -1,0 +1,6 @@
+{
+  "project_id": "proj_4pBB5WlZndem",
+  "file_path": "package.json",
+  "content": "{\n  \"name\": \"nexusaistore\",\n  \"version\": \"1.0.0\",\n  \"private\": true,\n  \"scripts\": {\n    \"build\": \"mkdir -p dist && cp index.html dist/index.html && cp README.md dist/ 2>/dev/null || true\"\n  },\n  \"dependencies\": {}\n}",
+  "updated_at": "2026-11-09T08:48:25.390Z"
+}
